@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ref, onValue, off } from 'firebase/database'
+import { ref, onValue, off, query, orderByKey, limitToLast } from 'firebase/database'
 import { database } from '../services/firebase'
 
 /**
@@ -107,8 +107,105 @@ export const useAllSensorData = () => {
 export const useSiteSensorData = siteId => {
   const { data, loading, error, connectionStatus } = useSensorData(siteId)
 
+  // 다중 센서 지원: 전체 사이트 데이터 반환 (레거시 ultrasonic 체크 제거)
+  const sensorData = data || null
+
   return {
-    sensorData: data?.ultrasonic || null,
+    sensorData,
+    loading,
+    error,
+    connectionStatus,
+  }
+}
+
+/**
+ * 특정 현장의 센서 히스토리 데이터를 가져오는 훅
+ * @param {string} siteId - 현장 ID
+ * @param {number} limit - 가져올 데이터 개수 (기본값: 20)
+ * @returns {Object} { historyData, loading, error, connectionStatus }
+ */
+export const useSensorHistory = (siteId, limit = 20) => {
+  const [historyData, setHistoryData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [connectionStatus, setConnectionStatus] = useState('connecting')
+
+  useEffect(() => {
+    if (!siteId) {
+      setError('Site ID가 필요합니다.')
+      setLoading(false)
+      return
+    }
+
+    console.log(
+      `🔥 useSensorHistory 훅 시작: 현장 ${siteId}, 제한 ${limit}개`
+    )
+
+    // Firebase 히스토리 참조 생성
+    const historyPath = `sensors/${siteId}/history`
+    const historyRef = ref(database, historyPath)
+
+    console.log('📍 Firebase 히스토리 참조 경로:', historyPath)
+
+    // limitToLast로 최근 데이터만 가져오기
+    const limitedQuery = query(
+      historyRef,
+      orderByKey(),
+      limitToLast(limit)
+    )
+
+    // 실시간 리스너 설정
+    const unsubscribe = onValue(
+      limitedQuery,
+      snapshot => {
+        try {
+          console.log('📥 Firebase 히스토리 데이터 수신')
+          setConnectionStatus('connected')
+
+          const firebaseData = snapshot.val()
+          console.log('📊 수신된 히스토리 데이터:', firebaseData)
+
+          if (firebaseData) {
+            // 객체를 배열로 변환하고 timestamp로 정렬
+            const historyArray = Object.entries(firebaseData)
+              .map(([timestamp, data]) => ({
+                timestamp: parseInt(timestamp),
+                ...data,
+              }))
+              .sort((a, b) => b.timestamp - a.timestamp) // 최신순 정렬
+
+            setHistoryData(historyArray)
+            setError(null)
+          } else {
+            console.log('⚠️ 히스토리 데이터가 없음')
+            setHistoryData([])
+            setError(null)
+          }
+        } catch (err) {
+          console.error('❌ 히스토리 데이터 처리 오류:', err)
+          setError(`히스토리 데이터 처리 오류: ${err.message}`)
+          setConnectionStatus('error')
+        } finally {
+          setLoading(false)
+        }
+      },
+      err => {
+        console.error('❌ Firebase 히스토리 연결 오류:', err)
+        setError(`Firebase 히스토리 연결 오류: ${err.message}`)
+        setConnectionStatus('error')
+        setLoading(false)
+      }
+    )
+
+    // 정리 함수
+    return () => {
+      console.log('🔥 useSensorHistory 훅 정리')
+      unsubscribe()
+    }
+  }, [siteId, limit])
+
+  return {
+    historyData,
     loading,
     error,
     connectionStatus,
