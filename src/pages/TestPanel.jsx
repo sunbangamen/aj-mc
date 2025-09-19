@@ -144,16 +144,12 @@ function TestPanel() {
           <div className="no-data-section">
             <h4>⚠️ 데이터 없음</h4>
             <p>Firebase Console에서 다음 경로에 데이터를 추가해주세요:</p>
-            <code>/sensors/test/ultrasonic/</code>
+            <code>/sensors/test/ultrasonic_1/</code>
             <div className="sample-data">
               <h5>샘플 데이터:</h5>
               <pre>
                 {JSON.stringify(
-                  {
-                    distance: 100,
-                    timestamp: Date.now(),
-                    status: 'normal',
-                  },
+                  { distance: 100, timestamp: Date.now(), status: 'normal' },
                   null,
                   2
                 )}
