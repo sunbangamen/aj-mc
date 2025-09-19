@@ -321,14 +321,12 @@ export const extractSensorsFromSiteData = (siteData) => {
 export const getLegacySensorData = (siteData) => {
   if (!siteData) return null
 
-  // 기존 구조 (ultrasonic) 우선 확인
-  if (siteData.ultrasonic) {
-    return siteData.ultrasonic
-  }
-
-  // 새 구조에서 첫 번째 초음파 센서 찾기 (패딩/비패딩 모두 지원)
+  // 새 구조 우선 사용(패딩/비패딩 모두 지원)
   if (siteData.ultrasonic_01) return siteData.ultrasonic_01
   if (siteData.ultrasonic_1) return siteData.ultrasonic_1
+
+  // 기존 구조 (ultrasonic) 마지막에 사용
+  if (siteData.ultrasonic) return siteData.ultrasonic
 
   return null
 }
