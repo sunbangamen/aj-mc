@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAlertSystem } from '../hooks/useAlertSystem'
 import { useSimulation } from '../contexts/SimulationContext'
-import { useSiteManagement } from '../hooks/useSiteManagement'
+import { useSiteManagement, useSites } from '../hooks/useSiteManagement'
 import ThresholdConfig from '../components/ThresholdConfig'
 import AlertManager from '../components/AlertManager'
 import HardwareMetadataPanel from '../components/HardwareMetadataPanel'
@@ -33,8 +33,13 @@ const AdminPanel = () => {
     loadSiteThresholds
   } = useAlertSystem()
 
-  // 사이트 관리 훅
-  const { sites, isLoading: sitesLoading } = useSiteManagement()
+  // 사이트 목록 훅(이름 매핑용)
+  const { sites, loading: sitesLoading } = useSites()
+  const siteNames = React.useMemo(() => {
+    const map = {}
+    sites.forEach(s => { if (s?.id) map[s.id] = s.name || s.id })
+    return map
+  }, [sites])
 
   // 시뮬레이션 컨텍스트
   const {
@@ -174,6 +179,7 @@ const AdminPanel = () => {
               onDelete={deleteAlert}
               onDeleteAll={deleteAllAlerts}
               isLoading={alertsLoading}
+              siteNames={siteNames}
             />
           </div>
         )}

@@ -16,6 +16,7 @@ const MeasurementTable = React.memo(function MeasurementTable({ siteId, sensorKe
   const [historyData, setHistoryDataThrottled, setHistoryDataImmediate] = useThrottledState([], 150)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [collapsed, setCollapsed] = useState(true)
 
   useEffect(() => {
     if (!siteId || !sensorKey) return
@@ -113,23 +114,28 @@ const MeasurementTable = React.memo(function MeasurementTable({ siteId, sensorKe
 
   // 유효한 데이터만 필터링
   const validHistoryData = historyData.filter(isValidSensorData)
+  const previewCount = Math.min(5, limit)
+  const displayed = collapsed ? validHistoryData.slice(0, previewCount) : validHistoryData
 
   return (
-    <div className="measurement-table">
+    <div className="measurement-table compact">
       <div className="table-header">
         <h3>{sensorName ? `${sensorName} 측정 이력` : '측정 이력'}</h3>
         <div className="table-info">
-          <span className="data-count">
-            {validHistoryData.length}개 / 최근 {limit}개
-          </span>
+          <span className="data-count">{displayed.length}개 / 총 {validHistoryData.length}개</span>
           <span className={`connection-status ${connectionStatus}`}>
             {connectionStatus === 'connected' ? '🟢 실시간' : '🔴 연결 안됨'}
           </span>
+          {validHistoryData.length > previewCount && (
+            <button className="btn btn-sm" onClick={() => setCollapsed(v => !v)} style={{ marginLeft: 8 }}>
+              {collapsed ? '펼치기' : '접기'}
+            </button>
+          )}
         </div>
       </div>
 
       <div className="table-container">
-        <table className="measurement-table-grid">
+        <table className="measurement-table-grid density-compact">
           <thead>
             <tr>
               <th>시간</th>
@@ -138,7 +144,7 @@ const MeasurementTable = React.memo(function MeasurementTable({ siteId, sensorKe
             </tr>
           </thead>
           <tbody>
-            {validHistoryData.map((data, index) => {
+            {displayed.map((data, index) => {
               // 센서 타입에 따른 값과 단위 결정
               const sensorType = sensorKey ? sensorKey.split('_')[0] : 'ultrasonic'
               const value = getSensorValue(data, sensorType)

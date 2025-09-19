@@ -6,7 +6,7 @@
 import React, { useState } from 'react'
 import { ALERT_TYPES } from '../utils/alertSystem'
 
-const AlertBanner = ({ alerts, onAcknowledge, onDismiss, compact = false }) => {
+const AlertBanner = ({ alerts, onAcknowledge, onDismiss, compact = false, siteNames = {} }) => {
   const [minimized, setMinimized] = useState(false)
 
   // 활성 알림만 필터링 (확인되지 않은 알림)
@@ -50,6 +50,8 @@ const AlertBanner = ({ alerts, onAcknowledge, onDismiss, compact = false }) => {
     return new Date(timestamp).toLocaleDateString('ko-KR')
   }
 
+  const resolveSiteName = (id) => siteNames?.[id] || id
+
   if (compact) {
     // 축약 모드 (Dashboard용)
     return (
@@ -71,7 +73,7 @@ const AlertBanner = ({ alerts, onAcknowledge, onDismiss, compact = false }) => {
           {!minimized && (
             <div className="alert-details">
               <div className="alert-message">
-                <strong>최우선 알림:</strong> {topAlert.siteId}/{topAlert.sensorKey} - {formatAlertMessage(topAlert)}
+                <strong>최우선 알림:</strong> {resolveSiteName(topAlert.siteId)}/{topAlert.sensorKey} - {formatAlertMessage(topAlert)}
               </div>
               {uniqueAlerts.length > 3 && (
                 <div className="alert-summary" style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>

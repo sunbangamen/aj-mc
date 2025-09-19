@@ -4693,3 +4693,50 @@ body {
     max-width: 200px;
   }
 }
+/* HardwareStatusPanel responsive styles */
+.hardware-panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+.hardware-panel.empty { padding: 12px 16px; }
+.hardware-panel.empty h4 { margin: 0 0 6px; font-size: 15px; color: #111827; }
+.hardware-panel.empty p { margin: 0; color: #6b7280; font-size: 13px; }
+.hardware-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.hardware-header h4 { margin: 0; font-size: 16px; font-weight: 600; color: #111827; }
+.hardware-header .sensor-key { font-size: 12px; color: #6b7280; }
+.hardware-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; padding: 12px 16px; }
+.hardware-grid.small-gap { gap: 8px; padding-top: 0; }
+.metric-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; background: #fff; }
+.metric-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.metric-title { font-size: 13px; color: #374151; }
+.metric-value { font-weight: 700; color: #111827; }
+.metric-sub { margin-top: 4px; font-size: 12px; color: #6b7280; }
+.progress { height: 6px; background: #f3f4f6; border-radius: 9999px; margin-top: 8px; overflow: hidden; }
+.progress .fill { height: 100%; border-radius: 9999px; transition: width 200ms ease; }
+.metric-pill { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e5e7eb; border-radius: 9999px; padding: 6px 10px; background: #fff; }
+.metric-pill .pill-name { font-size: 12px; color: #4b5563; }
+.metric-pill .pill-value { font-size: 13px; font-weight: 600; color: #111827; }
+.maintenance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 12px; padding: 4px 16px 16px; }
+.kv { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #f3f4f6; border-radius: 8px; background: #fafafa; }
+.kv.wide { grid-column: 1 / -1; }
+.kv .k { font-size: 12px; color: #6b7280; }
+.kv .v { font-size: 13px; color: #111827; font-weight: 600; }
+.kv .v.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-weight: 500; background: #f3f4f6; padding: 3px 6px; border-radius: 6px; }
+
+@media (max-width: 480px) {
+  .hardware-grid { grid-template-columns: 1fr 1fr; }
+  .maintenance-grid { grid-template-columns: 1fr; }
+}
+
+/* MeasurementTable compact styles */
+.measurement-table.compact .measurement-table-grid.density-compact thead th { padding: 6px 8px; font-size: 12px; }
+.measurement-table.compact .measurement-table-grid.density-compact tbody td { padding: 6px 8px; font-size: 12px; }
+.measurement-table.compact .table-header { display: flex; align-items: center; justify-content: space-between; }
+.measurement-table.compact .table-header .table-info { display: flex; align-items: center; gap: 8px; }
+.measurement-table.compact .status-badge { font-size: 11px; padding: 2px 6px; border-radius: 10px; }
+.measurement-table.compact .data-warning { font-size: 12px; color: #6b7280; padding: 6px 0; }
+
+@media (max-width: 480px) {
+  .measurement-table.compact .measurement-table-grid.density-compact thead { display: none; }
+  .measurement-table.compact .measurement-table-grid.density-compact tbody tr { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; border-bottom: 1px solid #f3f4f6; }
+  .measurement-table.compact .measurement-table-grid.density-compact tbody td.time-cell { grid-column: 1 / -1; color: #6b7280; font-size: 11px; }
+  .measurement-table.compact .measurement-table-grid.density-compact tbody td.distance-cell .distance-value { font-weight: 700; }
+  .measurement-table.compact .measurement-table-grid.density-compact tbody td.status-cell { justify-self: end; }
+}
