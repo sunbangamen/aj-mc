@@ -21,7 +21,7 @@ export const useSimulation = () => {
 export const SimulationProvider = ({ children }) => {
   const [isRunning, setIsRunning] = useState(false)
   const [simulationConfig, setSimulationConfig] = useState({
-    interval: 5000, // 5초마다 업데이트 (성능 개선)
+    interval: 3000, // 3초마다 업데이트 (요청 반영)
     mode: 'random', // 'random', 'scenario', 'gradual'
     sites: [], // 시뮬레이션할 사이트 목록
   })
@@ -103,10 +103,17 @@ export const SimulationProvider = ({ children }) => {
       return
     }
 
+    // 활성 사이트만 대상으로 실행
+    const activeSites = sites.filter(s => s.status === 'active')
+    if (activeSites.length === 0) {
+      debug('활성 상태의 사이트가 없어 시뮬레이션을 건너뜁니다')
+      return
+    }
+
     // 처리시간 측정 시작
     const startTime = performance.now()
 
-    for (const site of sites) {
+    for (const site of activeSites) {
       // 새로운 sensorConfig 구조 우선 사용, 없으면 구형식 사용
       const sensorConfig = site.sensorConfig || {}
       const hasNewConfig = Object.keys(sensorConfig).length > 0
@@ -216,7 +223,7 @@ export const SimulationProvider = ({ children }) => {
 
       return {
         ...prev,
-        totalUpdates: prev.totalUpdates + sites.length,
+        totalUpdates: prev.totalUpdates + activeSites.length,
         lastUpdate: new Date().toLocaleTimeString(),
         processingTimes: newProcessingTimes,
         averageProcessingTime: Math.round(averageProcessingTime * 100) / 100 // 소수점 2자리
@@ -265,7 +272,7 @@ export const SimulationProvider = ({ children }) => {
     debug(`🎯 시뮬레이션 대상: ${simulationConfig.sites.length}개 사이트`)
 
     // 모든 사이트의 기존 단일 센서 키 정리
-    for (const site of simulationConfig.sites) {
+    for (const site of simulationConfig.sites.filter(s => s.status === 'active')) {
       await cleanupLegacySensorKeys(site.id)
     }
 
@@ -339,7 +346,7 @@ export const SimulationProvider = ({ children }) => {
   const setAllSensorsStatus = async (status) => {
     const { sites } = simulationConfig
 
-    for (const site of sites) {
+    for (const site of sites.filter(s => s.status === 'active')) {
       const sensorTypes = site.sensorTypes || ['ultrasonic']
       const totalSensorCount = site.sensorCount || 1
       const sensorsPerType = sensorTypes.length === 1

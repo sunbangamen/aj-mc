@@ -18,7 +18,7 @@ import {
 } from '../types/sensor'
 import { useThrottledState } from '../hooks/useThrottledState'
 
-const SensorChart = React.memo(function SensorChart({ siteId, sensorKey = 'ultrasonic_01', sensorData, limit = 20, height = 300, connectionStatus = 'connected', sensorName = '' }) {
+const SensorChart = React.memo(function SensorChart({ siteId, sensorKey = 'ultrasonic_1', sensorData, limit = 20, height = 300, connectionStatus = 'connected', sensorName = '' }) {
   const [historyData, setHistoryDataThrottled, setHistoryDataImmediate] = useThrottledState([], 150)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -172,6 +172,8 @@ const SensorChart = React.memo(function SensorChart({ siteId, sensorKey = 'ultra
     )
   }
 
+  const showDots = chartData && chartData.length <= 60
+
   return (
     <div className="sensor-chart">
       <div className="chart-header">
@@ -217,9 +219,9 @@ const SensorChart = React.memo(function SensorChart({ siteId, sensorKey = 'ultra
               dataKey="value"
               stroke="#3498db"
               strokeWidth={2}
-              dot={false}
+              dot={showDots ? <CustomDot /> : false}
               isAnimationActive={false}
-              activeDot={false}
+              activeDot={{ r: 4, stroke: '#3498db', strokeWidth: 1 }}
               connectNulls={false}
               animationDuration={0}
             />

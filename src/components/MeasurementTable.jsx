@@ -12,7 +12,7 @@ import {
 import { debug, error as logError } from '../utils/log'
 import { useThrottledState } from '../hooks/useThrottledState'
 
-const MeasurementTable = React.memo(function MeasurementTable({ siteId, sensorKey = 'ultrasonic_01', sensorData, limit = 20, connectionStatus = 'connected', sensorName = '' }) {
+const MeasurementTable = React.memo(function MeasurementTable({ siteId, sensorKey = 'ultrasonic_1', sensorData, limit = 20, connectionStatus = 'connected', sensorName = '' }) {
   const [historyData, setHistoryDataThrottled, setHistoryDataImmediate] = useThrottledState([], 150)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
