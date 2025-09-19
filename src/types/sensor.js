@@ -262,6 +262,7 @@ export const extractSensorsFromSiteData = (siteData) => {
 
   debug('🔍 hasNumberedSensors:', hasNumberedSensors)
 
+  const seenNormalized = new Set()
   Object.entries(siteData).forEach(([sensorKey, sensorData]) => {
     debug('🔍 처리 중인 센서 키:', sensorKey, '데이터 유무:', !!sensorData)
 
@@ -280,9 +281,16 @@ export const extractSensorsFromSiteData = (siteData) => {
       ? sensorKey.split('_')[0]
       : sensorKey
 
-    const sensorNumber = sensorKey.includes('_')
-      ? parseInt(sensorKey.split('_')[1]).toString() // "01" → "1", "02" → "2"
-      : '1'
+    const rawNumberPart = sensorKey.includes('_') ? sensorKey.split('_')[1] : '1'
+    const normalizedNumber = String(parseInt(rawNumberPart || '1', 10) || 1) // "01"→1, 안전 변환
+
+    // 동일 센서(패딩만 다른 경우) 중복 제거
+    const normalizedKey = `${sensorType}_${normalizedNumber}`
+    if (seenNormalized.has(normalizedKey)) {
+      debug('⏭️ 패딩만 다른 중복 센서 건너뜀:', sensorKey, '→', normalizedKey)
+      return
+    }
+    seenNormalized.add(normalizedKey)
 
     const rawValue = getSensorValue(sensorData, sensorType)
     const formattedValue = formatSensorValue(rawValue)
@@ -290,8 +298,8 @@ export const extractSensorsFromSiteData = (siteData) => {
     const sensor = {
       key: sensorKey,
       type: sensorType,
-      number: sensorNumber,
-      displayName: `${getSensorDisplayName(sensorType)} ${sensorNumber}`,
+      number: normalizedNumber,
+      displayName: `${getSensorDisplayName(sensorType)} ${normalizedNumber}`,
       data: sensorData,
       value: formattedValue,
       rawValue: rawValue, // 원본 값도 보관
@@ -318,10 +326,9 @@ export const getLegacySensorData = (siteData) => {
     return siteData.ultrasonic
   }
 
-  // 새 구조에서 첫 번째 초음파 센서 찾기
-  if (siteData.ultrasonic_01) {
-    return siteData.ultrasonic_01
-  }
+  // 새 구조에서 첫 번째 초음파 센서 찾기 (패딩/비패딩 모두 지원)
+  if (siteData.ultrasonic_01) return siteData.ultrasonic_01
+  if (siteData.ultrasonic_1) return siteData.ultrasonic_1
 
   return null
 }

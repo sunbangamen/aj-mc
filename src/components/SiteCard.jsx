@@ -6,8 +6,9 @@ import {
   getLegacySensorData,
   extractSensorsFromSiteData,
 } from '../types/sensor'
+import { SITE_STATUS_LABELS, SITE_STATUS_COLORS } from '../types/site'
 
-const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName }) {
+const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, siteStatus = 'active' }) {
   const { primarySensor, allSensors, statusColor, statusLabel, lastUpdate } = useMemo(() => {
     const primary = getLegacySensorData(siteData)
     const sensors = extractSensorsFromSiteData(siteData)
@@ -26,8 +27,25 @@ const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName }) {
   }, [siteData])
 
   return (
-    <Link to={`/site/${siteId}`} className="site-card">
-      <h3>{siteName}</h3>
+    <Link to={`/site/${siteId}`} className="site-card" style={siteStatus !== 'active' ? { opacity: 0.85 } : undefined}>
+      <h3>
+        {siteName}
+        {siteStatus !== 'active' && (
+          <span
+            className="site-status-badge"
+            style={{
+              marginLeft: 8,
+              fontSize: '0.8rem',
+              padding: '2px 8px',
+              borderRadius: 12,
+              backgroundColor: SITE_STATUS_COLORS[siteStatus] || '#95a5a6',
+              color: '#fff'
+            }}
+          >
+            {SITE_STATUS_LABELS[siteStatus] || siteStatus}
+          </span>
+        )}
+      </h3>
       <div className="status-badge" style={{ backgroundColor: statusColor }}>
         {statusLabel}
       </div>
@@ -78,4 +96,3 @@ const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName }) {
 })
 
 export default SiteCard
-

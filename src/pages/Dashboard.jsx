@@ -93,9 +93,17 @@ function Dashboard() {
           </div>
         ) : (
           allSites.map(({ siteId, ...siteData }) => {
+            const siteMeta = sites.find(s => s.id === siteId)
             const siteName = getSiteName(siteId)
+            const siteStatus = siteMeta?.status || 'active'
             return (
-              <SiteCard key={siteId} siteId={siteId} siteData={siteData} siteName={siteName} />
+              <SiteCard
+                key={siteId}
+                siteId={siteId}
+                siteData={siteData}
+                siteName={siteName}
+                siteStatus={siteStatus}
+              />
             )
           })
         )}
