@@ -64,6 +64,59 @@ export const getRandomInRange = (min, max, decimals = 0) => {
 }
 
 /**
+ * Phase 14D: 하드웨어 메타데이터 생성
+ */
+export const generateHardwareMetadata = (sensorType = 'ultrasonic') => {
+  const hardwareModels = {
+    ultrasonic: ['HC-SR04', 'JSN-SR04T', 'US-100'],
+    temperature: ['DHT22', 'DS18B20', 'SHT30'],
+    humidity: ['DHT22', 'SHT30', 'HIH6130'],
+    pressure: ['BMP280', 'BME680', 'MS5611']
+  }
+
+  const models = hardwareModels[sensorType] || hardwareModels.ultrasonic
+  const selectedModel = models[getRandomInRange(0, models.length - 1)]
+
+  return {
+    batteryLevel: getRandomInRange(15, 100), // 15-100% (배터리 부족 시뮬레이션 포함)
+    signalStrength: getRandomInRange(-80, -20), // -80 ~ -20 dBm (일반적인 WiFi 신호 범위)
+    firmwareVersion: `v1.${getRandomInRange(0, 5)}.${getRandomInRange(0, 9)}`, // v1.0.0 ~ v1.5.9
+    hardwareModel: selectedModel
+  }
+}
+
+/**
+ * Phase 14D: 유지보수 정보 생성 (설치 후 경과 시간 기반)
+ */
+export const generateMaintenanceInfo = () => {
+  const now = Date.now()
+  const daysAgo = (days) => now - (days * 24 * 60 * 60 * 1000)
+
+  return {
+    installDate: daysAgo(getRandomInRange(30, 365)), // 30일 ~ 1년 전 설치
+    lastMaintenance: daysAgo(getRandomInRange(7, 90)), // 1주 ~ 3개월 전 점검
+    calibrationDate: daysAgo(getRandomInRange(14, 180)), // 2주 ~ 6개월 전 교정
+    warrantyExpire: now + (getRandomInRange(6, 24) * 30 * 24 * 60 * 60 * 1000) // 6개월 ~ 2년 후 만료
+  }
+}
+
+/**
+ * Phase 14D: 측정 품질 지표 생성
+ */
+export const generateQualityMetrics = (status) => {
+  // 상태에 따라 품질 지표가 달라짐
+  const baseAccuracy = status === 'normal' ? 95 : status === 'warning' ? 85 : 70
+  const baseReliability = status === 'normal' ? 'high' : status === 'warning' ? 'medium' : 'low'
+
+  return {
+    accuracy: getRandomInRange(baseAccuracy - 5, baseAccuracy + 5, 1), // ±5% 범위
+    reliability: baseReliability,
+    errorCount: getRandomInRange(0, status === 'normal' ? 2 : status === 'warning' ? 8 : 20),
+    consecutiveErrors: status === 'alert' ? getRandomInRange(1, 5) : 0
+  }
+}
+
+/**
  * 초음파 센서 데이터 생성
  */
 export const generateUltrasonicData = (forceStatus = null) => {
@@ -86,7 +139,12 @@ export const generateUltrasonicData = (forceStatus = null) => {
     distance,
     status: config.status,
     timestamp,
-    lastUpdate: timestamp
+    lastUpdate: timestamp,
+
+    // Phase 14D: 운영 메타데이터 추가
+    ...generateHardwareMetadata('ultrasonic'),
+    ...generateMaintenanceInfo(),
+    ...generateQualityMetrics(status)
   }
 }
 
@@ -110,10 +168,16 @@ export const generateTemperatureData = (forceStatus = null) => {
   const temperature = getRandomInRange(config.min, config.max, 1)
 
   return {
-    temperature,
+    value: temperature, // 온도는 value 키 사용
+    temperature, // 하위 호환성
     status: config.status,
     timestamp,
-    lastUpdate: timestamp
+    lastUpdate: timestamp,
+
+    // Phase 14D: 운영 메타데이터 추가
+    ...generateHardwareMetadata('temperature'),
+    ...generateMaintenanceInfo(),
+    ...generateQualityMetrics(status)
   }
 }
 
@@ -137,10 +201,16 @@ export const generateHumidityData = (forceStatus = null) => {
   const humidity = getRandomInRange(config.min, config.max)
 
   return {
-    humidity,
+    value: humidity, // 습도는 value 키 사용
+    humidity, // 하위 호환성
     status: config.status,
     timestamp,
-    lastUpdate: timestamp
+    lastUpdate: timestamp,
+
+    // Phase 14D: 운영 메타데이터 추가
+    ...generateHardwareMetadata('humidity'),
+    ...generateMaintenanceInfo(),
+    ...generateQualityMetrics(status)
   }
 }
 
@@ -164,10 +234,16 @@ export const generatePressureData = (forceStatus = null) => {
   const pressure = getRandomInRange(config.min, config.max, 1)
 
   return {
-    pressure,
+    value: pressure, // 압력은 value 키 사용
+    pressure, // 하위 호환성
     status: config.status,
     timestamp,
-    lastUpdate: timestamp
+    lastUpdate: timestamp,
+
+    // Phase 14D: 운영 메타데이터 추가
+    ...generateHardwareMetadata('pressure'),
+    ...generateMaintenanceInfo(),
+    ...generateQualityMetrics(status)
   }
 }
 

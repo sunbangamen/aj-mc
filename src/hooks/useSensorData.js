@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { ref, onValue, off, query, orderByKey, limitToLast } from 'firebase/database'
 import { database } from '../services/firebase'
+import { debug, error as logError } from '../utils/log'
+import { useThrottledState } from './useThrottledState'
 
 /**
  * 실시간 센서 데이터를 관리하는 커스텀 훅
@@ -8,13 +10,13 @@ import { database } from '../services/firebase'
  * @returns {Object} { data, loading, error, connectionStatus }
  */
 export const useSensorData = (siteId = null) => {
-  const [data, setData] = useState(null)
+  const [data, setDataThrottled, setDataImmediate] = useThrottledState(null, 120)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [connectionStatus, setConnectionStatus] = useState('connecting')
 
   useEffect(() => {
-    console.log(
+    debug(
       '🔥 useSensorData 훅 시작:',
       siteId ? `현장 ${siteId}` : '전체 데이터'
     )
@@ -23,29 +25,29 @@ export const useSensorData = (siteId = null) => {
     const dataPath = siteId ? `sensors/${siteId}` : 'sensors'
     const dataRef = ref(database, dataPath)
 
-    console.log('📍 Firebase 참조 경로:', dataPath)
+    debug('📍 Firebase 참조 경로:', dataPath)
 
     // 실시간 리스너 설정
     const unsubscribe = onValue(
       dataRef,
       snapshot => {
         try {
-          console.log('📥 Firebase 데이터 수신')
+          debug('📥 Firebase 데이터 수신')
           setConnectionStatus('connected')
 
           const firebaseData = snapshot.val()
-          console.log('📊 수신된 데이터:', firebaseData)
+          debug('📊 수신된 데이터 수신됨')
 
           if (firebaseData) {
-            setData(firebaseData)
+            setDataThrottled(firebaseData)
             setError(null)
           } else {
-            console.log('⚠️ 데이터가 없음')
-            setData(null)
+            debug('⚠️ 데이터가 없음')
+            setDataImmediate(null)
             setError('데이터가 없습니다.')
           }
         } catch (err) {
-          console.error('❌ 데이터 처리 오류:', err)
+          logError('❌ 데이터 처리 오류:', err)
           setError(`데이터 처리 오류: ${err.message}`)
           setConnectionStatus('error')
         } finally {
@@ -53,7 +55,7 @@ export const useSensorData = (siteId = null) => {
         }
       },
       err => {
-        console.error('❌ Firebase 연결 오류:', err)
+        logError('❌ Firebase 연결 오류:', err)
         setError(`Firebase 연결 오류: ${err.message}`)
         setConnectionStatus('error')
         setLoading(false)
@@ -62,7 +64,7 @@ export const useSensorData = (siteId = null) => {
 
     // 정리 함수
     return () => {
-      console.log('🔥 useSensorData 훅 정리')
+      debug('🔥 useSensorData 훅 정리')
       off(dataRef)
       unsubscribe()
     }
@@ -125,7 +127,7 @@ export const useSiteSensorData = siteId => {
  * @returns {Object} { historyData, loading, error, connectionStatus }
  */
 export const useSensorHistory = (siteId, limit = 20) => {
-  const [historyData, setHistoryData] = useState([])
+  const [historyData, setHistoryDataThrottled, setHistoryDataImmediate] = useThrottledState([], 150)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [connectionStatus, setConnectionStatus] = useState('connecting')
@@ -174,11 +176,11 @@ export const useSensorHistory = (siteId, limit = 20) => {
               }))
               .sort((a, b) => b.timestamp - a.timestamp) // 최신순 정렬
 
-            setHistoryData(historyArray)
+            setHistoryDataThrottled(historyArray)
             setError(null)
           } else {
             console.log('⚠️ 히스토리 데이터가 없음')
-            setHistoryData([])
+            setHistoryDataImmediate([])
             setError(null)
           }
         } catch (err) {

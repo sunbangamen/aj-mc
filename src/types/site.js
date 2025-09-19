@@ -11,14 +11,22 @@
  */
 
 /**
+ * 센서 설정 타입
+ * @typedef {Object} SensorConfig
+ * @property {number} ultrasonic - 초음파 센서 개수
+ * @property {number} temperature - 온도 센서 개수
+ * @property {number} humidity - 습도 센서 개수
+ * @property {number} pressure - 압력 센서 개수
+ */
+
+/**
  * 사이트 데이터 타입
  * @typedef {Object} SiteData
  * @property {string} id - 사이트 고유 ID
  * @property {string} name - 현장명
  * @property {string} location - 현장 위치/주소
  * @property {string} description - 현장 설명
- * @property {number} sensorCount - 센서 개수
- * @property {SensorType[]} sensorTypes - 센서 타입 목록
+ * @property {SensorConfig} sensorConfig - 센서별 개수 설정
  * @property {SiteStatus} status - 사이트 상태
  * @property {number} createdAt - 생성 시간 (Unix timestamp)
  * @property {number} updatedAt - 수정 시간 (Unix timestamp)
@@ -59,8 +67,12 @@ export const DEFAULT_SITE_TEMPLATE = {
   name: '',
   location: '',
   description: '',
-  sensorCount: 1,
-  sensorTypes: ['ultrasonic'],
+  sensorConfig: {
+    ultrasonic: 1,
+    temperature: 0,
+    humidity: 0,
+    pressure: 0
+  },
   status: 'active'
 }
 
@@ -78,8 +90,7 @@ export const isValidSiteData = (siteData) => {
     typeof siteData.id === 'string' &&
     typeof siteData.name === 'string' &&
     typeof siteData.location === 'string' &&
-    typeof siteData.sensorCount === 'number' &&
-    Array.isArray(siteData.sensorTypes) &&
+    (siteData.sensorConfig && typeof siteData.sensorConfig === 'object') &&
     Object.keys(SITE_STATUS_LABELS).includes(siteData.status)
   )
 }
@@ -111,7 +122,12 @@ export const calculateSiteStats = (sites) => {
   return sites.reduce((stats, site) => {
     stats.total++
     stats[site.status]++
-    stats.totalSensors += site.sensorCount
+
+    // 새로운 구조에서 센서 개수 계산
+    if (site.sensorConfig) {
+      stats.totalSensors += Object.values(site.sensorConfig).reduce((sum, count) => sum + count, 0)
+    }
+
     return stats
   }, { total: 0, active: 0, inactive: 0, maintenance: 0, totalSensors: 0 })
 }

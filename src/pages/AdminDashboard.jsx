@@ -251,8 +251,11 @@ function AdminDashboard() {
                   <div className="info-row">
                     <span className="info-label">📊 센서:</span>
                     <span className="info-value">
-                      {site.sensorCount}개 -{' '}
-                      {site.sensorTypes.map(type => SENSOR_TYPE_ICONS[type]).join(' ')}
+                      {site.sensorConfig ? Object.values(site.sensorConfig).reduce((sum, count) => sum + count, 0) : 0}개 -{' '}
+                      {site.sensorConfig ? Object.entries(site.sensorConfig)
+                        .filter(([type, count]) => count > 0)
+                        .map(([type]) => SENSOR_TYPE_ICONS[type])
+                        .join(' ') : ''}
                     </span>
                   </div>
                   <div className="info-row">

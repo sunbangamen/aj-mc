@@ -9,11 +9,28 @@
  * 기본 센서 데이터 타입
  * @typedef {Object} BaseSensorData
  * @property {number} timestamp - Unix timestamp (ms)
+ * @property {number} lastUpdate - 마지막 업데이트 시간
  * @property {SensorStatus} status - 센서 상태
  * @property {string} [deviceId] - 하드웨어 디바이스 ID (선택사항)
  * @property {string} [location] - 센서 설치 위치 (선택사항)
- * @property {number} [batteryLevel] - 배터리 잔량 (선택사항)
- * @property {number} [signalStrength] - 신호 강도 (선택사항)
+ *
+ * // Phase 14D: 하드웨어 메타데이터
+ * @property {number} [batteryLevel] - 배터리 잔량 (%) 0-100
+ * @property {number} [signalStrength] - WiFi 신호 강도 (dBm) -100~0
+ * @property {string} [firmwareVersion] - 펌웨어 버전 (예: "v1.2.3")
+ * @property {string} [hardwareModel] - 센서 모델명 (예: "HC-SR04")
+ *
+ * // Phase 14D: 유지보수 정보
+ * @property {number} [installDate] - 설치일 Unix timestamp
+ * @property {number} [lastMaintenance] - 마지막 점검일 Unix timestamp
+ * @property {number} [calibrationDate] - 교정일 Unix timestamp
+ * @property {number} [warrantyExpire] - 보증 만료일 Unix timestamp
+ *
+ * // Phase 14D: 측정 품질 지표
+ * @property {number} [accuracy] - 정확도 (%) 0-100
+ * @property {string} [reliability] - 신뢰도 등급 ("high"|"medium"|"low")
+ * @property {number} [errorCount] - 총 오류 횟수
+ * @property {number} [consecutiveErrors] - 연속 오류 횟수
  */
 
 /**
@@ -121,19 +138,46 @@ export const formatChartTime = timestamp => {
   })
 }
 
-// 히스토리 데이터 변환 함수
-export const transformHistoryForChart = historyData => {
+// 히스토리 데이터 변환 함수 (다중 센서 지원)
+export const transformHistoryForChart = (historyData, sensorType = null) => {
   if (!historyData || !Array.isArray(historyData)) return []
 
   return historyData
     .slice()
     .reverse() // 시간순 정렬 (차트용)
-    .map(item => ({
-      time: formatChartTime(item.timestamp),
-      distance: item.distance,
-      status: item.status,
-      timestamp: item.timestamp,
-    }))
+    .map(item => {
+      const baseData = {
+        time: formatChartTime(item.timestamp),
+        status: item.status,
+        timestamp: item.timestamp,
+      }
+
+      // 센서 타입에 따라 값 매핑
+      if (sensorType) {
+        if (sensorType.startsWith('ultrasonic')) {
+          baseData.value = item.distance
+          baseData.distance = item.distance // 하위 호환성
+        } else if (sensorType.startsWith('temperature')) {
+          baseData.value = item.temperature
+          baseData.temperature = item.temperature
+        } else if (sensorType.startsWith('humidity')) {
+          baseData.value = item.humidity
+          baseData.humidity = item.humidity
+        } else if (sensorType.startsWith('pressure')) {
+          baseData.value = item.pressure
+          baseData.pressure = item.pressure
+        }
+      } else {
+        // 타입이 없으면 모든 값을 포함 (하위 호환성)
+        baseData.distance = item.distance
+        baseData.temperature = item.temperature
+        baseData.humidity = item.humidity
+        baseData.pressure = item.pressure
+        baseData.value = item.distance || item.temperature || item.humidity || item.pressure
+      }
+
+      return baseData
+    })
 }
 
 // 측정 상태별 스타일 생성 함수
@@ -160,13 +204,22 @@ export const getSensorValue = (sensorData, sensorType) => {
 
   if (sensorType.startsWith('ultrasonic')) {
     return sensorData.distance
-  } else if (sensorType.startsWith('temperature') ||
-             sensorType.startsWith('humidity') ||
-             sensorType.startsWith('pressure')) {
-    return sensorData.value
+  } else if (sensorType.startsWith('temperature')) {
+    return sensorData.temperature
+  } else if (sensorType.startsWith('humidity')) {
+    return sensorData.humidity
+  } else if (sensorType.startsWith('pressure')) {
+    return sensorData.pressure
   }
 
-  return sensorData.distance || sensorData.value
+  return sensorData.distance || sensorData.temperature || sensorData.humidity || sensorData.pressure || sensorData.value
+}
+
+// 센서 값 포맷팅 함수 (소수점 2자리 제한)
+export const formatSensorValue = (value) => {
+  if (value === null || value === undefined) return '---'
+  if (typeof value !== 'number') return '---'
+  return Number(value).toFixed(2)
 }
 
 // 센서 타입별 단위 반환 함수
@@ -188,8 +241,13 @@ export const getSensorDisplayName = (sensorType) => {
 }
 
 // 현장 데이터에서 모든 센서 목록 추출
+import { debug } from '../utils/log'
+
 export const extractSensorsFromSiteData = (siteData) => {
   if (!siteData) return []
+
+  debug('🔍 extractSensorsFromSiteData 호출됨')
+  debug('🔍 사이트 데이터 키들:', Object.keys(siteData))
 
   const sensors = []
   let hasNumberedSensors = false
@@ -198,14 +256,23 @@ export const extractSensorsFromSiteData = (siteData) => {
   Object.keys(siteData).forEach(sensorKey => {
     if (sensorKey.includes('_') && sensorKey !== 'history') {
       hasNumberedSensors = true
+      debug('✅ 번호가 있는 센서 키 발견:', sensorKey)
     }
   })
 
+  debug('🔍 hasNumberedSensors:', hasNumberedSensors)
+
   Object.entries(siteData).forEach(([sensorKey, sensorData]) => {
-    if (sensorKey === 'history') return // 히스토리는 제외
+    debug('🔍 처리 중인 센서 키:', sensorKey, '데이터 유무:', !!sensorData)
+
+    if (sensorKey === 'history') {
+      debug('⏭️ 히스토리 키 건너뜀')
+      return // 히스토리는 제외
+    }
 
     // 번호가 있는 센서가 있으면 기존 단일 키는 제외 (하위호환성 보장하되 중복 방지)
     if (hasNumberedSensors && !sensorKey.includes('_')) {
+      debug('⏭️ 기존 단일 키 건너뜀:', sensorKey)
       return
     }
 
@@ -214,8 +281,11 @@ export const extractSensorsFromSiteData = (siteData) => {
       : sensorKey
 
     const sensorNumber = sensorKey.includes('_')
-      ? sensorKey.split('_')[1]
-      : '01'
+      ? parseInt(sensorKey.split('_')[1]).toString() // "01" → "1", "02" → "2"
+      : '1'
+
+    const rawValue = getSensorValue(sensorData, sensorType)
+    const formattedValue = formatSensorValue(rawValue)
 
     const sensor = {
       key: sensorKey,
@@ -223,13 +293,18 @@ export const extractSensorsFromSiteData = (siteData) => {
       number: sensorNumber,
       displayName: `${getSensorDisplayName(sensorType)} ${sensorNumber}`,
       data: sensorData,
-      value: getSensorValue(sensorData, sensorType),
+      value: formattedValue,
+      rawValue: rawValue, // 원본 값도 보관
       unit: getSensorUnit(sensorType),
       location: sensorData?.location || '미설정'
     }
 
+    debug('✅ 센서 추가됨:', sensor.displayName, 'key:', sensorKey)
     sensors.push(sensor)
   })
+
+  debug('🔍 최종 추출된 센서 수:', sensors.length)
+  debug('🔍 최종 센서 키들:', sensors.map(s => s.key))
 
   return sensors.sort((a, b) => a.key.localeCompare(b.key))
 }

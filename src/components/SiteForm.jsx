@@ -17,8 +17,12 @@ function SiteForm({
     name: '',
     location: '',
     description: '',
-    sensorCount: 1,
-    sensorTypes: ['ultrasonic'],
+    sensorConfig: {
+      ultrasonic: 1,
+      temperature: 0,
+      humidity: 0,
+      pressure: 0
+    },
     status: 'active',
     ...DEFAULT_SITE_TEMPLATE
   })
@@ -33,9 +37,18 @@ function SiteForm({
   // 초기 데이터 설정 (편집 모드)
   useEffect(() => {
     if (initialData && mode === 'edit') {
+      const sensorConfig = {
+        ultrasonic: 0,
+        temperature: 0,
+        humidity: 0,
+        pressure: 0,
+        ...initialData.sensorConfig
+      }
+
       setFormData({
         ...formData,
-        ...initialData
+        ...initialData,
+        sensorConfig
       })
     }
   }, [initialData, mode])
@@ -54,15 +67,20 @@ function SiteForm({
       newErrors.location = '현장 위치를 입력해주세요.'
     }
 
-    if (formData.sensorCount < 1) {
-      newErrors.sensorCount = '센서 개수는 1개 이상이어야 합니다.'
-    } else if (formData.sensorCount > 10) {
-      newErrors.sensorCount = '센서 개수는 10개 이하로 설정해주세요.'
+    const totalSensors = Object.values(formData.sensorConfig).reduce((sum, count) => sum + count, 0)
+
+    if (totalSensors < 1) {
+      newErrors.sensorConfig = '최소 1개의 센서를 설정해주세요.'
+    } else if (totalSensors > 20) {
+      newErrors.sensorConfig = '전체 센서 개수는 20개 이하로 설정해주세요.'
     }
 
-    if (formData.sensorTypes.length === 0) {
-      newErrors.sensorTypes = '최소 1개의 센서 타입을 선택해주세요.'
-    }
+    // 각 센서 타입별 개수 검증
+    Object.entries(formData.sensorConfig).forEach(([type, count]) => {
+      if (count > 10) {
+        newErrors[`sensor_${type}`] = `${SENSOR_TYPE_LABELS[type]} 센서는 10개 이하로 설정해주세요.`
+      }
+    })
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -84,16 +102,22 @@ function SiteForm({
     }
   }
 
-  // 센서 타입 체크박스 처리
-  const handleSensorTypeChange = (sensorType, checked) => {
-    let newSensorTypes
-    if (checked) {
-      newSensorTypes = [...formData.sensorTypes, sensorType]
-    } else {
-      newSensorTypes = formData.sensorTypes.filter(type => type !== sensorType)
+  // 센서 개수 변경 처리
+  const handleSensorCountChange = (sensorType, count) => {
+    const newSensorConfig = {
+      ...formData.sensorConfig,
+      [sensorType]: Math.max(0, parseInt(count) || 0)
     }
 
-    handleInputChange('sensorTypes', newSensorTypes)
+    handleInputChange('sensorConfig', newSensorConfig)
+
+    // 해당 센서 타입 에러 초기화
+    if (errors[`sensor_${sensorType}`]) {
+      setErrors(prev => ({
+        ...prev,
+        [`sensor_${sensorType}`]: ''
+      }))
+    }
   }
 
   // 폼 제출 처리
@@ -110,7 +134,7 @@ function SiteForm({
       name: formData.name.trim(),
       location: formData.location.trim(),
       description: formData.description.trim(),
-      sensorCount: parseInt(formData.sensorCount)
+      sensorConfig: formData.sensorConfig
     }
 
     onSubmit(submitData)
@@ -168,48 +192,44 @@ function SiteForm({
         />
       </div>
 
-      {/* 센서 개수 */}
-      <div className="form-group">
-        <label htmlFor="sensorCount" className="form-label">
-          센서 개수 <span className="required">*</span>
-        </label>
-        <input
-          type="number"
-          id="sensorCount"
-          className={`form-input ${errors.sensorCount ? 'error' : ''}`}
-          value={formData.sensorCount}
-          onChange={(e) => handleInputChange('sensorCount', e.target.value)}
-          min="1"
-          max="10"
-          disabled={isLoading}
-        />
-        {errors.sensorCount && <div className="form-error">{errors.sensorCount}</div>}
-      </div>
-
-      {/* 센서 타입 */}
+      {/* 센서 설정 */}
       <div className="form-group">
         <label className="form-label">
-          센서 타입 <span className="required">*</span>
+          센서 설정 <span className="required">*</span>
+          <span className="form-hint">
+            (전체 {Object.values(formData.sensorConfig).reduce((sum, count) => sum + count, 0)}개)
+          </span>
         </label>
-        <div className="sensor-types-grid">
+        <div className="sensor-config-grid">
           {availableSensorTypes.map(sensorType => (
-            <label key={sensorType} className="sensor-type-checkbox">
-              <input
-                type="checkbox"
-                checked={formData.sensorTypes.includes(sensorType)}
-                onChange={(e) => handleSensorTypeChange(sensorType, e.target.checked)}
-                disabled={isLoading}
-              />
-              <span className="sensor-type-label">
+            <div key={sensorType} className="sensor-config-item">
+              <div className="sensor-config-header">
                 <span className="sensor-icon">
                   {SENSOR_TYPE_ICONS[sensorType]}
                 </span>
-                {SENSOR_TYPE_LABELS[sensorType]}
-              </span>
-            </label>
+                <span className="sensor-label">
+                  {SENSOR_TYPE_LABELS[sensorType]}
+                </span>
+              </div>
+              <div className="sensor-count-input">
+                <input
+                  type="number"
+                  min="0"
+                  max="10"
+                  value={formData.sensorConfig[sensorType]}
+                  onChange={(e) => handleSensorCountChange(sensorType, e.target.value)}
+                  className={`form-input compact ${errors[`sensor_${sensorType}`] ? 'error' : ''}`}
+                  disabled={isLoading}
+                />
+                <span className="unit">개</span>
+              </div>
+              {errors[`sensor_${sensorType}`] &&
+                <div className="form-error small">{errors[`sensor_${sensorType}`]}</div>
+              }
+            </div>
           ))}
         </div>
-        {errors.sensorTypes && <div className="form-error">{errors.sensorTypes}</div>}
+        {errors.sensorConfig && <div className="form-error">{errors.sensorConfig}</div>}
       </div>
 
       {/* 현장 상태 (편집 모드에서만) */}

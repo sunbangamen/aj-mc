@@ -6,6 +6,7 @@ import {
   createStatusScenario,
   createGradualChangeSimulator,
 } from '../utils/sensorSimulator'
+import { debug, error as logError } from '../utils/log'
 
 const SimulationContext = createContext()
 
@@ -20,7 +21,7 @@ export const useSimulation = () => {
 export const SimulationProvider = ({ children }) => {
   const [isRunning, setIsRunning] = useState(false)
   const [simulationConfig, setSimulationConfig] = useState({
-    interval: 3000, // 3초마다 업데이트
+    interval: 5000, // 5초마다 업데이트 (성능 개선)
     mode: 'random', // 'random', 'scenario', 'gradual'
     sites: [], // 시뮬레이션할 사이트 목록
   })
@@ -57,7 +58,7 @@ export const SimulationProvider = ({ children }) => {
       }
       return []
     } catch (error) {
-      console.error('사이트 목록 로드 오류:', error)
+      logError('사이트 목록 로드 오류:', error)
       return []
     }
   }
@@ -67,24 +68,22 @@ export const SimulationProvider = ({ children }) => {
    */
   const updateSensorData = async (siteId, sensorType, sensorNumber, data) => {
     try {
-      // 센서 키 생성 (예: ultrasonic_01, temperature_01)
-      const sensorKey = sensorNumber ? `${sensorType}_${sensorNumber.toString().padStart(2, '0')}` : sensorType
+      // 센서 키 생성 - 새로운 형식에 맞게 수정 (예: ultrasonic_1, temperature_1)
+      const sensorKey = sensorNumber ? `${sensorType}_${sensorNumber}` : sensorType
 
       // 현재 센서 데이터 업데이트
       const sensorRef = ref(database, `sensors/${siteId}/${sensorKey}`)
       // set으로 부모 노드를 덮어쓰면 history가 매 주기 삭제되므로 update로 병합
       await update(sensorRef, data)
-      console.log(`✅ 현재 데이터 저장: sensors/${siteId}/${sensorKey}`, data)
 
       // 센서별 히스토리에 추가
       const historyPath = `sensors/${siteId}/${sensorKey}/history/${data.timestamp}`
       const historyRef = ref(database, historyPath)
       await set(historyRef, data)
-      console.log(`📚 히스토리 저장: ${historyPath}`, data)
 
       return true
     } catch (error) {
-      console.error('센서 데이터 업데이트 오류:', error)
+      logError('센서 데이터 업데이트 오류:', error)
       setSimulationStats(prev => ({
         ...prev,
         errors: prev.errors + 1
@@ -100,7 +99,7 @@ export const SimulationProvider = ({ children }) => {
     const { sites, mode } = simulationConfig
 
     if (sites.length === 0) {
-      console.log('시뮬레이션할 사이트가 없습니다.')
+      debug('시뮬레이션할 사이트가 없습니다.')
       return
     }
 
@@ -108,56 +107,94 @@ export const SimulationProvider = ({ children }) => {
     const startTime = performance.now()
 
     for (const site of sites) {
-      // 현장별 센서 타입과 개수 확인
-      const sensorTypes = site.sensorTypes || ['ultrasonic']
-      const totalSensorCount = site.sensorCount || 1
+      // 새로운 sensorConfig 구조 우선 사용, 없으면 구형식 사용
+      const sensorConfig = site.sensorConfig || {}
+      const hasNewConfig = Object.keys(sensorConfig).length > 0
 
-      console.log(`🎯 시뮬레이션 처리 중: ${site.id}`)
-      console.log(`📊 센서 타입: [${sensorTypes.join(', ')}]`)
-      console.log(`🔢 센서 개수: ${totalSensorCount}`)
+      if (hasNewConfig) {
+        // 새로운 구조: sensorConfig 사용
+        for (const [sensorType, count] of Object.entries(sensorConfig)) {
+          if (count > 0) {
+            for (let sensorNum = 1; sensorNum <= count; sensorNum++) {
+              const simulatorKey = `${site.id}_${sensorType}_${sensorNum}`
+              let sensorData
 
-      // 단일 센서 타입의 경우 전체 개수 사용, 다중 타입의 경우 균등 분배
-      const sensorsPerType = sensorTypes.length === 1
-        ? totalSensorCount
-        : Math.max(1, Math.floor(totalSensorCount / sensorTypes.length))
+              switch (mode) {
+                case 'scenario':
+                  // 시나리오 기반 시뮬레이션
+                  if (!simulatorsRef.current[`${simulatorKey}_scenario`]) {
+                    simulatorsRef.current[`${simulatorKey}_scenario`] = createStatusScenario()
+                  }
+                  const scenarioStatus = simulatorsRef.current[`${simulatorKey}_scenario`]()
+                  sensorData = generateSensorData(sensorType, scenarioStatus)
+                  break
 
-      for (const sensorType of sensorTypes) {
-        // 각 센서 타입별로 sensorsPerType만큼 생성
-        for (let sensorNum = 1; sensorNum <= sensorsPerType; sensorNum++) {
-          const simulatorKey = `${site.id}_${sensorType}_${sensorNum.toString().padStart(2, '0')}`
-          let sensorData
+                case 'gradual':
+                  // 점진적 변화 시뮬레이션
+                  if (!simulatorsRef.current[`${simulatorKey}_gradual`]) {
+                    simulatorsRef.current[`${simulatorKey}_gradual`] = createGradualChangeSimulator(sensorType)
+                  }
+                  const gradualSimulator = simulatorsRef.current[`${simulatorKey}_gradual`]
+                  sensorData = gradualSimulator()
+                  break
 
-          switch (mode) {
-            case 'scenario':
-              // 시나리오 기반 시뮬레이션
-              if (!simulatorsRef.current[`${simulatorKey}_scenario`]) {
-                simulatorsRef.current[`${simulatorKey}_scenario`] = createStatusScenario()
+                case 'random':
+                default:
+                  // 랜덤 시뮬레이션
+                  sensorData = generateSensorData(sensorType)
+                  break
               }
-              const scenarioStatus = simulatorsRef.current[`${simulatorKey}_scenario`]()
-              sensorData = generateSensorData(sensorType, scenarioStatus)
-              break
 
-            case 'gradual':
-              // 점진적 변화 시뮬레이션
-              if (!simulatorsRef.current[`${simulatorKey}_gradual`]) {
-                simulatorsRef.current[`${simulatorKey}_gradual`] = createGradualChangeSimulator(sensorType)
-              }
-              const gradualSimulator = simulatorsRef.current[`${simulatorKey}_gradual`]
-              sensorData = gradualSimulator()
-              break
+              // 센서별 위치 정보 추가 (시뮬레이션용)
+              sensorData.location = `${sensorType} 센서 ${sensorNum}번`
+              sensorData.deviceId = `SIM_${site.id.slice(-4)}_${sensorType.slice(0, 3).toUpperCase()}_${sensorNum}`
 
-            case 'random':
-            default:
-              // 랜덤 시뮬레이션
-              sensorData = generateSensorData(sensorType)
-              break
+              await updateSensorData(site.id, sensorType, sensorNum, sensorData)
+            }
           }
+        }
+      } else {
+        // 구형식 지원 (하위 호환성)
+        const sensorTypes = site.sensorTypes || ['ultrasonic']
+        const totalSensorCount = site.sensorCount || 1
 
-          // 센서별 위치 정보 추가 (시뮬레이션용)
-          sensorData.location = `${sensorType} ${sensorNum}번`
-          sensorData.deviceId = `SIM_${site.id.slice(-4)}_${sensorType.slice(0, 3).toUpperCase()}_${sensorNum.toString().padStart(2, '0')}`
+        const sensorsPerType = sensorTypes.length === 1
+          ? totalSensorCount
+          : Math.max(1, Math.floor(totalSensorCount / sensorTypes.length))
 
-          await updateSensorData(site.id, sensorType, sensorNum, sensorData)
+        for (const sensorType of sensorTypes) {
+          for (let sensorNum = 1; sensorNum <= sensorsPerType; sensorNum++) {
+            const simulatorKey = `${site.id}_${sensorType}_${sensorNum}`
+            let sensorData
+
+            switch (mode) {
+              case 'scenario':
+                if (!simulatorsRef.current[`${simulatorKey}_scenario`]) {
+                  simulatorsRef.current[`${simulatorKey}_scenario`] = createStatusScenario()
+                }
+                const scenarioStatus = simulatorsRef.current[`${simulatorKey}_scenario`]()
+                sensorData = generateSensorData(sensorType, scenarioStatus)
+                break
+
+              case 'gradual':
+                if (!simulatorsRef.current[`${simulatorKey}_gradual`]) {
+                  simulatorsRef.current[`${simulatorKey}_gradual`] = createGradualChangeSimulator(sensorType)
+                }
+                const gradualSimulator = simulatorsRef.current[`${simulatorKey}_gradual`]
+                sensorData = gradualSimulator()
+                break
+
+              case 'random':
+              default:
+                sensorData = generateSensorData(sensorType)
+                break
+            }
+
+            sensorData.location = `${sensorType} 센서 ${sensorNum}번`
+            sensorData.deviceId = `SIM_${site.id.slice(-4)}_${sensorType.slice(0, 3).toUpperCase()}_${sensorNum}`
+
+            await updateSensorData(site.id, sensorType, sensorNum, sensorData)
+          }
         }
       }
     }
@@ -186,7 +223,10 @@ export const SimulationProvider = ({ children }) => {
       }
     })
 
-    console.log(`⚡ 시뮬레이션 사이클 완료: ${Math.round(processingTime)}ms`)
+    // 성능 모니터링 로그는 필요할 때만 출력
+    if (processingTime > 100) {
+      debug(`⚡ 시뮬레이션 사이클 완료: ${Math.round(processingTime)}ms`)
+    }
   }
 
   /**
@@ -202,9 +242,9 @@ export const SimulationProvider = ({ children }) => {
         await set(legacyRef, null)
       }
 
-      console.log(`🧹 ${siteId}: 기존 단일 센서 키 정리 완료`)
+      debug(`🧹 ${siteId}: 기존 단일 센서 키 정리 완료`)
     } catch (error) {
-      console.error('기존 센서 키 정리 오류:', error)
+      logError('기존 센서 키 정리 오류:', error)
     }
   }
 
@@ -214,7 +254,7 @@ export const SimulationProvider = ({ children }) => {
   const startSimulation = async () => {
     if (isRunning) return
 
-    console.log('🚀 전역 센서 시뮬레이션 시작')
+    debug('🚀 전역 센서 시뮬레이션 시작')
 
     // 현재 사이트 목록 확인
     if (simulationConfig.sites.length === 0) {
@@ -222,7 +262,7 @@ export const SimulationProvider = ({ children }) => {
       return false
     }
 
-    console.log(`🎯 시뮬레이션 대상: ${simulationConfig.sites.length}개 사이트`)
+    debug(`🎯 시뮬레이션 대상: ${simulationConfig.sites.length}개 사이트`)
 
     // 모든 사이트의 기존 단일 센서 키 정리
     for (const site of simulationConfig.sites) {
@@ -246,7 +286,7 @@ export const SimulationProvider = ({ children }) => {
    * 시뮬레이션 중지
    */
   const stopSimulation = () => {
-    console.log('⏹️ 전역 센서 시뮬레이션 중지')
+    debug('⏹️ 전역 센서 시뮬레이션 중지')
 
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
@@ -290,7 +330,7 @@ export const SimulationProvider = ({ children }) => {
     await updateSensorData(siteId, sensorType, sensorNumber, sensorData)
 
     const sensorKey = `${sensorType}_${sensorNumber.toString().padStart(2, '0')}`
-    console.log(`🎯 강제 설정: ${siteId}/${sensorKey} → ${status}`)
+    debug(`🎯 강제 설정: ${siteId}/${sensorKey} → ${status}`)
   }
 
   /**
@@ -329,14 +369,14 @@ export const SimulationProvider = ({ children }) => {
    * 사이트 목록 실시간 감지
    */
   useEffect(() => {
-    console.log('🔥 사이트 목록 실시간 감지 시작')
+    debug('🔥 사이트 목록 실시간 감지 시작')
 
     const sitesRef = ref(database, 'sites')
 
     const unsubscribe = onValue(sitesRef, (snapshot) => {
       try {
         const sitesData = snapshot.val()
-        console.log('📥 사이트 목록 업데이트:', sitesData)
+        debug('📥 사이트 목록 업데이트 수신')
 
         if (sitesData) {
           const sitesList = Object.entries(sitesData).map(([id, data]) => ({
@@ -344,24 +384,15 @@ export const SimulationProvider = ({ children }) => {
             ...data
           }))
 
-          console.log(`🏢 감지된 사이트: ${sitesList.length}개`, sitesList)
+          debug(`🏢 감지된 사이트: ${sitesList.length}개`)
 
-          setSimulationConfig(prev => {
-            console.log(`📊 이전 사이트 수: ${prev.sites.length}개`)
-            console.log(`📊 새 사이트 수: ${sitesList.length}개`)
-
-            // 강제 리렌더링을 위해 완전히 새로운 객체 생성
-            const newConfig = {
-              interval: prev.interval,
-              mode: prev.mode,
-              sites: [...sitesList] // 새 배열 생성
-            }
-
-            console.log('📊 새 설정 객체 생성:', newConfig)
-            return newConfig
-          })
+          setSimulationConfig(prev => ({
+            interval: prev.interval,
+            mode: prev.mode,
+            sites: [...sitesList]
+          }))
         } else {
-          console.log('📊 사이트 데이터 없음 - 빈 배열로 설정')
+          debug('📊 사이트 데이터 없음 - 빈 배열로 설정')
           setSimulationConfig(prev => ({
             interval: prev.interval,
             mode: prev.mode,
@@ -369,12 +400,12 @@ export const SimulationProvider = ({ children }) => {
           }))
         }
       } catch (error) {
-        console.error('❌ 사이트 목록 실시간 업데이트 오류:', error)
+        logError('❌ 사이트 목록 실시간 업데이트 오류:', error)
       }
     })
 
     return () => {
-      console.log('🔥 사이트 목록 실시간 감지 중지')
+      debug('🔥 사이트 목록 실시간 감지 중지')
       unsubscribe()
     }
   }, [])
