@@ -9,9 +9,11 @@ import {
   getSensorValue,
   getSensorUnit,
 } from '../types/sensor'
+import { debug, error as logError } from '../utils/log'
+import { useThrottledState } from '../hooks/useThrottledState'
 
-function MeasurementTable({ siteId, sensorKey = 'ultrasonic_01', sensorData, limit = 20, connectionStatus = 'connected', sensorName = '' }) {
-  const [historyData, setHistoryData] = useState([])
+const MeasurementTable = React.memo(function MeasurementTable({ siteId, sensorKey = 'ultrasonic_01', sensorData, limit = 20, connectionStatus = 'connected', sensorName = '' }) {
+  const [historyData, setHistoryDataThrottled, setHistoryDataImmediate] = useThrottledState([], 150)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -26,16 +28,14 @@ function MeasurementTable({ siteId, sensorKey = 'ultrasonic_01', sensorData, lim
     const historyRef = ref(database, historyPath)
     const historyQuery = query(historyRef, orderByKey(), limitToLast(limit))
 
-    console.log(`📋 MeasurementTable: ${siteId}/${sensorKey} 히스토리 감지 시작`)
+    debug(`📋 MeasurementTable: ${siteId}/${sensorKey} 히스토리 감지 시작`)
 
     const unsubscribe = onValue(
       historyQuery,
       (snapshot) => {
         try {
           const firebaseData = snapshot.val()
-          console.log(`📋 ${sensorKey} 측정 이력 수신:`, firebaseData)
-          console.log(`📋 이력 경로: ${historyPath}`)
-          console.log(`📋 스냅샷 존재 여부:`, snapshot.exists())
+          debug(`📋 ${sensorKey} 측정 이력 수신 (exists=${snapshot.exists()})`)
 
           if (firebaseData) {
             const historyArray = Object.entries(firebaseData)
@@ -45,28 +45,28 @@ function MeasurementTable({ siteId, sensorKey = 'ultrasonic_01', sensorData, lim
               }))
               .sort((a, b) => b.timestamp - a.timestamp) // 테이블은 최신순 정렬
 
-            setHistoryData(historyArray)
+            setHistoryDataThrottled(historyArray)
             setError(null)
           } else {
-            setHistoryData([])
+            setHistoryDataImmediate([])
             setError(null)
           }
         } catch (err) {
-          console.error(`❌ ${sensorKey} 측정 이력 처리 오류:`, err)
+          logError(`❌ ${sensorKey} 측정 이력 처리 오류:`, err)
           setError(`측정 이력 처리 오류: ${err.message}`)
         } finally {
           setLoading(false)
         }
       },
       (err) => {
-        console.error(`❌ ${sensorKey} Firebase 연결 오류:`, err)
+        logError(`❌ ${sensorKey} Firebase 연결 오류:`, err)
         setError(`Firebase 연결 오류: ${err.message}`)
         setLoading(false)
       }
     )
 
     return () => {
-      console.log(`🔥 MeasurementTable: ${sensorKey} 히스토리 감지 중지`)
+      debug(`🔥 MeasurementTable: ${sensorKey} 히스토리 감지 중지`)
       unsubscribe()
     }
   }, [siteId, sensorKey, limit])
@@ -186,6 +186,6 @@ function MeasurementTable({ siteId, sensorKey = 'ultrasonic_01', sensorData, lim
       )}
     </div>
   )
-}
+})
 
 export default MeasurementTable

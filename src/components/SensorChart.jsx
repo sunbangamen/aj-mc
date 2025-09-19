@@ -16,9 +16,10 @@ import {
   STATUS_COLORS,
   STATUS_LABELS,
 } from '../types/sensor'
+import { useThrottledState } from '../hooks/useThrottledState'
 
-function SensorChart({ siteId, sensorKey = 'ultrasonic_01', sensorData, limit = 20, height = 300, connectionStatus = 'connected', sensorName = '' }) {
-  const [historyData, setHistoryData] = useState([])
+const SensorChart = React.memo(function SensorChart({ siteId, sensorKey = 'ultrasonic_01', sensorData, limit = 20, height = 300, connectionStatus = 'connected', sensorName = '' }) {
+  const [historyData, setHistoryDataThrottled, setHistoryDataImmediate] = useThrottledState([], 150)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -33,16 +34,11 @@ function SensorChart({ siteId, sensorKey = 'ultrasonic_01', sensorData, limit = 
     const historyRef = ref(database, historyPath)
     const historyQuery = query(historyRef, orderByKey(), limitToLast(limit))
 
-    console.log(`📊 SensorChart: ${siteId}/${sensorKey} 히스토리 감지 시작`)
-
     const unsubscribe = onValue(
       historyQuery,
       (snapshot) => {
         try {
           const firebaseData = snapshot.val()
-          console.log(`📊 ${sensorKey} 히스토리 수신:`, firebaseData)
-          console.log(`📊 히스토리 경로: ${historyPath}`)
-          console.log(`📊 스냅샷 존재 여부:`, snapshot.exists())
 
           if (firebaseData) {
             const historyArray = Object.entries(firebaseData)
@@ -52,28 +48,27 @@ function SensorChart({ siteId, sensorKey = 'ultrasonic_01', sensorData, limit = 
               }))
               .sort((a, b) => a.timestamp - b.timestamp) // 차트는 시간순 정렬
 
-            setHistoryData(historyArray)
+            setHistoryDataThrottled(historyArray)
             setError(null)
           } else {
-            setHistoryData([])
+            setHistoryDataImmediate([])
             setError(null)
           }
         } catch (err) {
-          console.error(`❌ ${sensorKey} 히스토리 처리 오류:`, err)
+          console.error(`히스토리 처리 오류 (${sensorKey}):`, err)
           setError(`히스토리 데이터 처리 오류: ${err.message}`)
         } finally {
           setLoading(false)
         }
       },
       (err) => {
-        console.error(`❌ ${sensorKey} Firebase 연결 오류:`, err)
+        console.error(`Firebase 연결 오류 (${sensorKey}):`, err)
         setError(`Firebase 연결 오류: ${err.message}`)
         setLoading(false)
       }
     )
 
     return () => {
-      console.log(`🔥 SensorChart: ${sensorKey} 히스토리 감지 중지`)
       unsubscribe()
     }
   }, [siteId, sensorKey, limit])
@@ -81,21 +76,32 @@ function SensorChart({ siteId, sensorKey = 'ultrasonic_01', sensorData, limit = 
   // 차트 데이터 변환 (useMemo로 성능 최적화)
   const chartData = useMemo(() => {
     if (!historyData || historyData.length === 0) return []
-    return transformHistoryForChart(historyData)
-  }, [historyData])
+    // 센서 키에서 센서 타입 추출
+    const sensorType = sensorKey ? sensorKey.split('_')[0] : null
+    return transformHistoryForChart(historyData, sensorType)
+  }, [historyData, sensorKey])
 
   // 상태별 색상 가져오기
   const getLineColor = status => STATUS_COLORS[status] || STATUS_COLORS.offline
+
+  // 센서 타입별 단위와 레이블 가져오기 (memoized)
+  const sensorInfo = useMemo(() => {
+    const sensorType = sensorKey ? sensorKey.split('_')[0] : 'ultrasonic'
+    const units = { ultrasonic: 'cm', temperature: '°C', humidity: '%', pressure: 'hPa' }
+    const labels = { ultrasonic: '거리', temperature: '온도', humidity: '습도', pressure: '압력' }
+    return { unit: units[sensorType] || '', label: labels[sensorType] || '값' }
+  }, [sensorKey])
 
   // 커스텀 툴팁 컴포넌트
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
+      const { unit, label: valueLabel } = sensorInfo
       return (
         <div className="chart-tooltip">
           <p className="tooltip-label">{`시간: ${label}`}</p>
-          <p className="tooltip-distance">
-            {`거리: ${data.distance} cm`}
+          <p className="tooltip-value">
+            {`${valueLabel}: ${data.value || '---'} ${unit}`}
           </p>
           <p
             className="tooltip-status"
@@ -203,18 +209,19 @@ function SensorChart({ siteId, sensorKey = 'ultrasonic_01', sensorData, limit = 
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: '#666' }}
-              label={{ value: '거리 (cm)', angle: -90, position: 'insideLeft' }}
+              label={{ value: `${sensorInfo.label} (${sensorInfo.unit})`, angle: -90, position: 'insideLeft' }}
             />
             <Tooltip content={<CustomTooltip />} />
             <Line
               type="monotone"
-              dataKey="distance"
+              dataKey="value"
               stroke="#3498db"
               strokeWidth={2}
-              dot={<CustomDot />}
-              activeDot={{ r: 5, stroke: '#3498db', strokeWidth: 2 }}
+              dot={false}
+              isAnimationActive={false}
+              activeDot={false}
               connectNulls={false}
-              animationDuration={500}
+              animationDuration={0}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -242,6 +249,6 @@ function SensorChart({ siteId, sensorKey = 'ultrasonic_01', sensorData, limit = 
       </div>
     </div>
   )
-}
+})
 
 export default SensorChart

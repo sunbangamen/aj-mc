@@ -200,15 +200,93 @@ export const useSiteManagement = () => {
       const siteRef = ref(database, `sites/${siteId}`)
       await set(siteRef, newSite)
 
-      // 기본 센서 데이터 생성
-      const sensorRef = ref(database, `sensors/${siteId}/ultrasonic`)
-      const defaultSensorData = {
-        distance: 50,
-        status: 'normal',
-        timestamp: now,
-        lastUpdate: now
+      // 센서 설정에 따른 센서 데이터 생성
+      const sensorConfig = siteData.sensorConfig || {}
+      const sensorCreationPromises = []
+
+      // 각 센서 타입별로 설정된 개수만큼 센서 데이터 생성
+      Object.entries(sensorConfig).forEach(([sensorType, count]) => {
+        if (count > 0) {
+          for (let i = 1; i <= count; i++) {
+            // 항상 일관되게 번호 붙이기 (1개여도 _1)
+            const sensorPath = `sensors/${siteId}/${sensorType}_${i}`
+
+            let defaultSensorData = {
+              status: 'normal',
+              timestamp: now,
+              lastUpdate: now,
+              // 기본 하드웨어 메타데이터
+              deviceId: `${sensorType.toUpperCase()}_${siteId.slice(-6)}_${i}`,
+              location: `${sensorType} 센서 ${i}번`,
+              batteryLevel: 95 + Math.floor(Math.random() * 5), // 95-99%
+              signalStrength: -40 - Math.floor(Math.random() * 20), // -40 ~ -60 dBm
+              firmwareVersion: 'v1.0.0',
+              accuracy: 95,
+              reliability: 'high',
+              errorCount: 0,
+              consecutiveErrors: 0,
+              installDate: now,
+              lastMaintenance: now,
+              calibrationDate: now
+            }
+
+            // 센서 타입별 기본 데이터 및 하드웨어 모델 설정
+            switch (sensorType) {
+              case 'ultrasonic':
+                defaultSensorData.distance = 50 + Math.random() * 100
+                defaultSensorData.hardwareModel = 'HC-SR04'
+                break
+              case 'temperature':
+                defaultSensorData.temperature = 20 + Math.random() * 15
+                defaultSensorData.hardwareModel = 'DS18B20'
+                break
+              case 'humidity':
+                defaultSensorData.humidity = 40 + Math.random() * 40
+                defaultSensorData.hardwareModel = 'DHT22'
+                break
+              case 'pressure':
+                defaultSensorData.pressure = 1000 + Math.random() * 50
+                defaultSensorData.hardwareModel = 'BMP280'
+                break
+              default:
+                defaultSensorData.value = 0
+                defaultSensorData.hardwareModel = 'Generic'
+            }
+
+            const sensorRef = ref(database, sensorPath)
+            sensorCreationPromises.push(set(sensorRef, defaultSensorData))
+          }
+        }
+      })
+
+      // 센서 데이터가 없으면 기본 ultrasonic 센서 하나 생성
+      if (sensorCreationPromises.length === 0) {
+        const defaultSensorRef = ref(database, `sensors/${siteId}/ultrasonic_1`)
+        const defaultSensorData = {
+          distance: 50,
+          status: 'normal',
+          timestamp: now,
+          lastUpdate: now,
+          // 기본 하드웨어 메타데이터
+          deviceId: `ULTRASONIC_${siteId.slice(-6)}_1`,
+          location: 'ultrasonic 센서 1번',
+          batteryLevel: 98,
+          signalStrength: -45,
+          firmwareVersion: 'v1.0.0',
+          hardwareModel: 'HC-SR04',
+          accuracy: 95,
+          reliability: 'high',
+          errorCount: 0,
+          consecutiveErrors: 0,
+          installDate: now,
+          lastMaintenance: now,
+          calibrationDate: now
+        }
+        sensorCreationPromises.push(set(defaultSensorRef, defaultSensorData))
       }
-      await set(sensorRef, defaultSensorData)
+
+      // 모든 센서 데이터 생성 완료까지 대기
+      await Promise.all(sensorCreationPromises)
 
       console.log('✅ 사이트 및 센서 데이터 생성 완료:', siteId)
       return { success: true, siteId, site: newSite }

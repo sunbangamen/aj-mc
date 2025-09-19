@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import SiteMonitor from './pages/SiteMonitor'
 import TestPanel from './pages/TestPanel'
 import AdminDashboard from './pages/AdminDashboard'
+import AdminPanel from './pages/AdminPanel'
 import SimulationPanel from './pages/SimulationPanel'
 import { SimulationProvider } from './contexts/SimulationContext'
 import { testFirebaseConnection } from './services/firebase'
@@ -24,7 +25,8 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="site/:siteId" element={<SiteMonitor />} />
             <Route path="test" element={<TestPanel />} />
-            <Route path="admin" element={<AdminDashboard />} />
+            <Route path="admin" element={<AdminPanel />} />
+            <Route path="admin-dashboard" element={<AdminDashboard />} />
             <Route path="simulation" element={<SimulationPanel />} />
           </Route>
         </Routes>

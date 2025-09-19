@@ -87,7 +87,10 @@ function Layout() {
               </Link>
             </li>
             <li>
-              <Link to="/admin">⚙️ 관리자</Link>
+              <Link to="/admin">🔧 시스템 관리</Link>
+            </li>
+            <li>
+              <Link to="/admin-dashboard">⚙️ 사이트 관리</Link>
             </li>
           </ul>
         </div>

@@ -1,12 +1,12 @@
 # 🚀 관제모니터링 시스템 개발 현황 메모
 
-**최종 업데이트**: 2025-09-18
+**최종 업데이트**: 2025-09-19
 **브랜치**: aj-mc-issue-3
-**최근 완료**: Phase 8-9 센서 시뮬레이션 + 대시보드 UI/UX 개선 완료
+**최근 완료**: Phase 14F 사이트별 임계값 시스템 + UI/UX 개선 완료
 
 ---
 
-## 📊 현재 완료 상황 (완성도 98%)
+## 📊 현재 완료 상황 (완성도 99.5%)
 
 ### ✅ Phase 1: 프로젝트 기반 환경 구축 (완료)
 - [x] Vite React 프로젝트 생성
@@ -71,22 +71,68 @@
   - 브랜드명: "초음파 모니터링" → "(사)안전재해환경대책본부"
   - 현장 링크 → 현장 드롭다운 메뉴 (현장 개수 표시 + 새 현장 추가 버튼)
 
-### ✅ 현재 작동하는 전체 기능들 (Phase 1-9)
+### ✅ Phase 14A: 다중 센서 지원 기반 구조 개발 (완료)
+- [x] **센서 타입 시스템 확장**: 초음파, 온도, 습도, 압력 센서 지원
+- [x] **다중 센서 데이터 구조**: ultrasonic_01, ultrasonic_02 형태로 센서별 구분
+- [x] **Dashboard 다중 센서 표시**: 현장별 여러 센서 동시 모니터링
+- [x] **SiteMonitor 개별 센서 지원**: 센서별 개별 차트와 테이블 표시
+- [x] **하위 호환성 보장**: 기존 단일 ultrasonic 키와 새 다중 센서 키 동시 지원
+
+### ✅ Phase 14B: 시뮬레이션 시스템 다중 센서 지원 (완료)
+- [x] **SimulationContext 다중 센서 적용**: 현장별 센서 타입과 개수에 따른 자동 센서 생성
+- [x] **센서별 시뮬레이터**: 각 센서마다 독립적인 시뮬레이션 상태 관리
+- [x] **자동 센서 분배**: 단일/다중 센서 타입에 따른 지능적 센서 개수 분배
+- [x] **레거시 키 정리**: 다중 센서 전환 시 기존 단일 키 자동 정리
+
+### ✅ Phase 14C: UI/UX 다중 센서 완전 지원 (완료)
+- [x] **타입 시스템 확장**: JSDoc 기반 다중 센서 타입 정의
+- [x] **유틸리티 함수**: 센서 추출, 값 획득, 단위 반환, 한글명 변환 함수
+- [x] **컴포넌트 업데이트**: SensorChart, MeasurementTable 다중 센서 대응
+- [x] **CSS 스타일링**: 다중 센서 그리드 레이아웃 및 반응형 디자인
+
+### ✅ Phase 14D: 운영 메타데이터 확장 (완료)
+- [x] **하드웨어 메타데이터**: 배터리 잔량, WiFi 신호강도, 펌웨어 버전, 하드웨어 모델
+- [x] **유지보수 정보**: 설치일, 마지막 점검일, 교정일, 보증 만료일
+- [x] **측정 품질 지표**: 정확도, 신뢰도, 오류 횟수, 연속 오류 횟수
+- [x] **모든 센서 타입 적용**: 초음파, 온도, 습도, 압력 센서 메타데이터 생성
+
+### ✅ Phase 14E: 경고 및 임계값 시스템 (완료)
+- [x] **임계값 설정 시스템**: 센서별 warning/alert 범위 설정 및 유효성 검증
+- [x] **경고 생성 로직**: 6가지 경고 타입(임계값, 오프라인, 배터리, 신호, 유지보수)
+- [x] **경고 관리 시스템**: 실시간 경고 감지, 확인, 삭제, 히스토리 관리
+- [x] **관리자 패널**: 임계값 설정, 경고 관리, 시뮬레이션 제어 통합 인터페이스
+- [x] **사용자 매뉴얼**: Phase 14E 시스템 완전 사용 가이드 문서화
+
+### ✅ Phase 14F: 사이트별 임계값 시스템 + UI/UX 개선 (완료)
+- [x] **사이트별 임계값 설정**: 전역 기본값 + 현장별 맞춤 임계값 시스템
+- [x] **Firebase 데이터 구조 확장**: `/settings/thresholds/global/`, `/settings/thresholds/sites/{siteId}/`
+- [x] **센서별 개별 초기화**: 각 센서 타입별 기본값 복원 기능
+- [x] **AdminPanel URL 라우팅**: 쿼리 파라미터 기반 사이트 선택 자동화
+- [x] **SiteMonitor 임계값 표시**: 현장별 임계값 정보 패널 + 설정 변경 링크
+- [x] **UI/UX 개선**: 현장명 표시, 버튼 스타일 개선, 직관적인 네비게이션
+- [x] **무한루프 해결**: useEffect 의존성 최적화 및 상태 관리 개선
+
+### ✅ 현재 작동하는 전체 기능들 (Phase 1-14F)
 - [x] **실시간 모니터링**: Firebase onValue로 실시간 데이터 업데이트
-- [x] **다중 현장 대시보드**: 동적 생성된 현장들 동시 모니터링 + 프로페셔널 UI
+- [x] **다중 센서 대시보드**: 현장별 다중 센서 동시 모니터링 + 프로페셔널 UI
 - [x] **상태별 색상 코딩**:
   - 🟢 정상 (< 100cm)
   - 🟡 주의 (100-200cm)
   - 🔴 경고 (> 200cm)
   - ⚫ 오프라인
-- [x] **개별 현장 모니터링**: Recharts 차트 + 측정 이력 테이블
+- [x] **개별 현장 모니터링**: 센서별 Recharts 차트 + 측정 이력 테이블
 - [x] **현장 관리 시스템**: 완전한 CRUD 작업 (생성/조회/수정/삭제)
+- [x] **다중 센서 지원**: 초음파, 온도, 습도, 압력 센서 동시 운영
 - [x] **센서 시뮬레이션**: 실제 센서 없이 실시간 데이터 자동 생성 (3가지 모드)
+- [x] **운영 메타데이터**: 하드웨어 상태, 유지보수 정보, 측정 품질 지표
+- [x] **경고 및 임계값 시스템**: 6가지 경고 타입, 실시간 경고 생성, 관리 인터페이스
+- [x] **사이트별 임계값 시스템**: 전역 기본값 + 현장별 맞춤 설정
+- [x] **관리자 패널**: 임계값 설정, 경고 관리, 시뮬레이션 제어 통합 (/admin)
 - [x] **시스템 모니터링**: 실제 성능 지표 + 상태 패널 + 빠른 액션
 - [x] **폼 검증 시스템**: 클라이언트 측 검증 + 에러 메시지
 - [x] **반응형 UI**: PC/모바일 양쪽 대응 + 전체화면 레이아웃
-- [x] **페이지 네비게이션**: React Router로 SPA 구현 (`/`, `/site/:id`, `/admin`, `/test`, `/simulation`)
-- [x] **스마트 내비게이션**: 드롭다운 메뉴 + 동적 현장 카운터
+- [x] **페이지 네비게이션**: React Router로 SPA 구현 (`/`, `/site/:id`, `/admin`, `/admin-dashboard`, `/test`, `/simulation`)
+- [x] **스마트 내비게이션**: 드롭다운 메뉴 + 동적 현장 카운터 + 시스템 관리 메뉴
 - [x] **에러 처리**: Firebase 연결 실패, 데이터 없음 상황 대응
 - [x] **데이터 일관성**: 현장 생성 시 센서 데이터 자동 생성, 삭제 시 함께 제거
 
@@ -94,42 +140,48 @@
 
 ## 🔧 기술적 성과
 
-### 🏗️ 현재 아키텍처 (Phase 1-9 완전 구현)
+### 🏗️ 현재 아키텍처 (Phase 1-14F 완전 구현)
 ```
 src/
 ├── components/
-│   ├── Layout.jsx              # 스마트 내비게이션 + 현장 드롭다운 메뉴
-│   ├── MeasurementTable.jsx    # 센서 측정 이력 테이블 (최근 20개)
-│   ├── SensorChart.jsx         # Recharts 실시간 라인 차트
-│   ├── SiteForm.jsx            # 현장 생성/편집 폼 (검증 포함)
+│   ├── Layout.jsx              # 스마트 내비게이션 + 현장 드롭다운 메뉴 + 시스템 관리 메뉴
+│   ├── MeasurementTable.jsx    # 센서별 측정 이력 테이블 (다중 센서 지원)
+│   ├── SensorChart.jsx         # 센서별 Recharts 실시간 라인 차트
+│   ├── SiteForm.jsx            # 현장 생성/편집 폼 (다중 센서 설정 포함)
 │   ├── SystemStatsCards.jsx    # 실시간 시스템 통계 카드
 │   ├── RecentEventsPanel.jsx   # 최근 이벤트 모니터링
 │   ├── SystemStatusPanel.jsx   # 시스템 성능 상태 패널
 │   ├── QuickActionsPanel.jsx   # 빠른 액션 버튼들
-│   └── SensorSimulationPanel.jsx # 시뮬레이션 제어 패널
+│   ├── SensorSimulationPanel.jsx # 시뮬레이션 제어 패널
+│   ├── ThresholdConfig.jsx     # 임계값 설정 컴포넌트 (Phase 14E)
+│   └── AlertManager.jsx        # 경고 관리 컴포넌트 (Phase 14E)
 ├── pages/
-│   ├── Dashboard.jsx           # 프로페셔널 전체 현장 대시보드
-│   ├── SiteMonitor.jsx         # 개별 현장 모니터링 (차트+테이블)
-│   ├── AdminDashboard.jsx      # 현장 관리 대시보드 (/admin)
+│   ├── Dashboard.jsx           # 다중 센서 대시보드 (프로페셔널 UI)
+│   ├── SiteMonitor.jsx         # 개별 현장 모니터링 (센서별 차트+테이블)
+│   ├── AdminDashboard.jsx      # 현장 관리 대시보드 (/admin-dashboard)
+│   ├── AdminPanel.jsx          # 시스템 관리 패널 (/admin) - Phase 14E-F
 │   ├── TestPanel.jsx           # Firebase 테스트 패널
-│   └── SimulationDashboard.jsx # 센서 시뮬레이션 제어 (/simulation)
+│   └── SimulationPanel.jsx     # 센서 시뮬레이션 제어 (/simulation)
 ├── contexts/
-│   └── SimulationContext.jsx   # 글로벌 시뮬레이션 상태 관리
+│   └── SimulationContext.jsx   # 글로벌 다중 센서 시뮬레이션 상태 관리
 ├── utils/
-│   └── sensorSimulator.js      # 센서 데이터 시뮬레이션 유틸리티
+│   ├── sensorSimulator.js      # 다중 센서 데이터 시뮬레이션 + 운영 메타데이터
+│   └── alertSystem.js          # 경고 및 임계값 시스템 (Phase 14E)
 ├── hooks/
-│   ├── useSensorData.js        # 실시간 센서 데이터 훅들
-│   └── useSiteManagement.js    # 사이트 CRUD 작업 훅들
+│   ├── useSensorData.js        # 실시간 다중 센서 데이터 훅들
+│   ├── useSiteManagement.js    # 사이트 CRUD 작업 훅들
+│   ├── useSensorSimulation.js  # 센서 시뮬레이션 관리 훅
+│   └── useAlertSystem.js       # 경고 시스템 관리 훅 (Phase 14E)
 ├── services/
 │   └── firebase.js             # Firebase 설정 및 연결
 ├── types/
-│   ├── sensor.js               # 센서 데이터 타입 및 유틸리티
+│   ├── sensor.js               # 다중 센서 데이터 타입 및 유틸리티 (Phase 14A-D)
 │   └── site.js                 # 사이트 데이터 타입 및 유틸리티
 └── scripts/
     └── check-env.mjs           # 환경변수 검증
 ```
 
-### 🔥 Firebase 데이터 구조 (완전 구현)
+### 🔥 Firebase 데이터 구조 (Phase 14F 사이트별 임계값 포함)
 ```json
 {
   "sites": {
@@ -157,6 +209,41 @@ src/
       }
     },
     "test": { "ultrasonic": {...} }
+  },
+  "settings": {
+    "thresholds": {
+      "global": {
+        "ultrasonic": {
+          "warning": { "min": 100, "max": 199 },
+          "alert": { "min": 200, "max": 300 },
+          "offline_timeout": 60000
+        },
+        "temperature": { "warning": {...}, "alert": {...} }
+      },
+      "sites": {
+        "site_1726574400000_abc123": {
+          "ultrasonic": {
+            "warning": { "min": 80, "max": 150 },
+            "alert": { "min": 151, "max": 250 },
+            "offline_timeout": 30000
+          }
+        }
+      }
+    }
+  },
+  "alerts": {
+    "active": {
+      "alert_id_123": {
+        "id": "site_abc_ultrasonic_warning_123",
+        "type": "warning",
+        "siteId": "site_abc",
+        "sensorKey": "ultrasonic_01",
+        "message": "초음파 값이 주의 수준입니다",
+        "timestamp": 1726574400000,
+        "acknowledged": false
+      }
+    },
+    "history": { ... }
   }
 }
 ```
@@ -305,7 +392,7 @@ src/
 
 ## 📋 최종 완료 현황 요약
 
-### ✅ 완료된 핵심 기능 (Phase 1-9) - 프로페셔널 모니터링 시스템
+### ✅ 완료된 핵심 기능 (Phase 1-14F) - 완전한 엔터프라이즈 모니터링 시스템
 1. **완전한 실시간 모니터링 시스템** - Firebase 기반 실시간 데이터 연동
 2. **측정 데이터 시각화** - Recharts 차트 + 측정 이력 테이블 (최근 20개)
 3. **현장 관리 시스템** - CRUD 작업 + 폼 검증 + 자동 센서 데이터 생성
@@ -314,8 +401,10 @@ src/
 6. **스마트 내비게이션** - 현장 드롭다운 메뉴 + 기관명 브랜딩
 7. **반응형 웹 인터페이스** - PC/모바일 최적화 + 전체화면 활용
 8. **데이터 일관성 보장** - 현장-센서 데이터 연동 + 생성/삭제 동기화
+9. **사이트별 임계값 시스템** - 전역 기본값 + 현장별 맞춤 설정
+10. **경고 및 알림 시스템** - 6가지 경고 타입 + 실시간 감지 + 관리 인터페이스
 
-### 🚀 시스템 완성도: 98% (운영 준비 완료)
+### 🚀 시스템 완성도: 99.5% (완전한 엔터프라이즈 준비 완료)
 **현재 상태**: 실제 현장에서 즉시 사용 가능한 완전한 모니터링 시스템
 
 ### 🎯 다음 추천 작업: Phase 10 (고급 데이터 시각화)
@@ -333,7 +422,14 @@ src/
 
 **주요 URL**:
 - `/` - 메인 대시보드 (프로페셔널 UI)
-- `/site/:id` - 개별 현장 모니터링 (차트+테이블)
-- `/admin` - 현장 관리 (CRUD)
+- `/site/:id` - 개별 현장 모니터링 (차트+테이블+임계값 정보)
+- `/admin` - 시스템 관리 (임계값 설정, 경고 관리, 시뮬레이션 제어)
+- `/admin-dashboard` - 현장 관리 (CRUD)
 - `/simulation` - 센서 시뮬레이션 제어
 - `/test` - Firebase 연결 테스트
+
+**Phase 14F 새로운 기능**:
+- **사이트별 임계값**: `/admin?tab=thresholds&siteId=xxx` 현장별 맞춤 설정
+- **센서별 초기화**: 각 센서 타입별 기본값 복원 기능
+- **현장 임계값 표시**: 현장 모니터링 페이지에서 현재 설정 확인
+- **직관적 네비게이션**: 현장명 표시 + 버튼 스타일 개선
