@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAllSensorData } from '../hooks/useSensorData'
 import { useSites } from '../hooks/useSiteManagement'
@@ -14,6 +14,11 @@ import SiteCard from '../components/SiteCard'
 function Dashboard() {
   const { allSites, loading, error, connectionStatus } = useAllSensorData()
   const { sites } = useSites()
+  const siteNames = useMemo(() => {
+    const map = {}
+    sites.forEach(s => { if (s?.id) map[s.id] = s.name || s.id })
+    return map
+  }, [sites])
 
   // Phase 14E: 알림 시스템
   const {
@@ -68,6 +73,7 @@ function Dashboard() {
         onAcknowledge={acknowledgeAlert}
         onDismiss={deleteAlert}
         compact={true}
+        siteNames={siteNames}
       />
 
       {/* 시스템 통계 카드 */}

@@ -12,7 +12,8 @@ const AlertManager = ({
   onAcknowledgeAll,
   onDelete,
   onDeleteAll,
-  isLoading
+  isLoading,
+  siteNames = {}
 }) => {
   const [filter, setFilter] = useState('all') // all, active, acknowledged
   const [sortBy, setSortBy] = useState('timestamp') // timestamp, priority, type
@@ -60,6 +61,9 @@ const AlertManager = ({
       second: '2-digit'
     })
   }
+
+  // siteId를 사람이 읽는 현장명으로 치환
+  const resolveSiteName = (id) => (siteNames && siteNames[id]) || id
 
   if (isLoading) {
     return (
@@ -162,7 +166,7 @@ const AlertManager = ({
                 <div className="alert-content">
                   <div className="alert-header-row">
                     <div className="alert-site">
-                      📍 {alert.siteId} / {alert.sensorKey}
+                      📍 {resolveSiteName(alert.siteId)} / {alert.sensorKey}
                     </div>
                     <div className="alert-timestamp">
                       {formatTimestamp(alert.timestamp)}
