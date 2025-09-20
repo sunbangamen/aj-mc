@@ -4,9 +4,11 @@
  */
 
 import React from 'react'
+import { useSimulation } from '../contexts/SimulationContext'
 import { formatDateTime } from '../types/sensor.js'
 
 const HardwareStatusPanel = React.memo(({ sensorData, sensorKey }) => {
+  const { backfillHardwareMetadata } = useSimulation()
   if (!sensorData) {
     return (
       <div className="hardware-panel empty">
@@ -75,6 +77,30 @@ const HardwareStatusPanel = React.memo(({ sensorData, sensorKey }) => {
           </div>
         )}
       </div>
+
+      {/* 보정 액션: 하드웨어 메타데이터가 일부 없을 때 노출 */}
+      {(
+        sensorData && (
+          sensorData.batteryLevel === undefined ||
+          sensorData.signalStrength === undefined ||
+          !sensorData.hardwareModel ||
+          !sensorData.firmwareVersion
+        )
+      ) && (
+        <div className="hardware-fix">
+          <button
+            className="btn btn-sm"
+            onClick={async () => {
+              const siteId = (window.location.pathname.match(/\/site\/([^/]+)/) || [])[1]
+              if (!siteId) return
+              const res = await backfillHardwareMetadata(siteId, sensorKey)
+              alert(res.message || '완료')
+            }}
+          >
+            🔧 하드웨어 정보 보충
+          </button>
+        </div>
+      )}
 
       {/* 품질 지표 */}
       <div className="hardware-grid small-gap">
