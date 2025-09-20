@@ -142,7 +142,16 @@ function SystemStatsCards({ allSites, connectionStatus }) {
 
       {/* 상위 이슈(대표 상태 비정상인 현장) */}
       {topIssues.length > 0 && (
-        <div className="top-issues" style={{ marginTop: 12 }}>
+        <div
+          className="top-issues"
+          style={{
+            marginTop: 12,
+            border: '1px solid #e5e7eb',
+            borderRadius: 8,
+            padding: 12,
+            background: '#ffffff'
+          }}
+        >
           <div style={{ fontWeight: 700, marginBottom: 8, fontSize: '1.1rem' }}>주요 이슈</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {topIssues.map(item => {
