@@ -8,6 +8,8 @@ import { useAllSensorData } from '../hooks/useSensorData'
 import { useSites } from '../hooks/useSiteManagement'
 import { useSimulation } from '../contexts/SimulationContext'
 import { extractSensorsFromSiteData, formatDateTime } from '../types/sensor.js'
+import { useAlertSystem } from '../hooks/useAlertSystem'
+import { DEFAULT_THRESHOLDS } from '../utils/alertSystem'
 
 const HardwareMetadataPanel = () => {
   const { allSites, loading, error } = useAllSensorData()
@@ -17,6 +19,12 @@ const HardwareMetadataPanel = () => {
   const [selectedSensor, setSelectedSensor] = useState('')
   const [editingMetadata, setEditingMetadata] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
+
+  // 임계값(offline_timeout) 관리
+  const { loadThresholds, loadSiteThresholds, saveThresholds, thresholds } = useAlertSystem()
+  const [timeoutConfig, setTimeoutConfig] = useState(DEFAULT_THRESHOLDS)
+  const [timeoutLoading, setTimeoutLoading] = useState(true)
+  const [timeoutError, setTimeoutError] = useState(null)
 
   // 사이트 정보 맵 생성
   const siteMap = {}
@@ -115,6 +123,54 @@ const HardwareMetadataPanel = () => {
     }))
   }
 
+  // 오프라인 임계값(offline_timeout) 로드
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      setTimeoutLoading(true)
+      setTimeoutError(null)
+      try {
+        const data = selectedSite
+          ? await loadSiteThresholds(selectedSite)
+          : await loadThresholds(null)
+        if (!mounted) return
+        setTimeoutConfig(data)
+      } catch (e) {
+        if (!mounted) return
+        setTimeoutError(e?.message || '임계값 로드 오류')
+      } finally {
+        if (mounted) setTimeoutLoading(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [selectedSite])
+
+  const handleTimeoutChange = (sensorType, seconds) => {
+    const ms = Math.max(10, Math.min(3600, parseInt(seconds || 0, 10))) * 1000
+    setTimeoutConfig(prev => ({
+      ...prev,
+      [sensorType]: {
+        ...prev[sensorType],
+        offline_timeout: ms
+      }
+    }))
+  }
+
+  const saveTimeouts = async () => {
+    const ok = await saveThresholds(timeoutConfig, selectedSite || null)
+    if (ok) alert('✅ 오프라인 임계값이 저장되었습니다.')
+    else alert('❌ 저장 중 오류가 발생했습니다.')
+  }
+
+  const resetTimeoutsToDefault = async () => {
+    if (!confirm('현재 범위의 오프라인 임계값을 기본값으로 초기화할까요?')) return
+    const base = DEFAULT_THRESHOLDS
+    setTimeoutConfig(base)
+    const ok = await saveThresholds(base, selectedSite || null)
+    if (ok) alert('✅ 기본값으로 초기화되었습니다.')
+  }
+
   // 하드웨어 상태 요약 통계 (필터링된 데이터 기준)
   const hardwareStats = {
     total: filteredSensorsData.length,
@@ -152,6 +208,43 @@ const HardwareMetadataPanel = () => {
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      {/* 오프라인 판정 시간 설정 */}
+      <div className="timeout-config card">
+        <div className="card-header">
+          <h3>📵 오프라인 판정 시간</h3>
+          <div className="scope">현재 범위: {selectedSite ? `📍 ${siteMap[selectedSite]?.name || selectedSite}` : '🌍 전역 기본값'}</div>
+        </div>
+        {timeoutLoading ? (
+          <div className="loading">임계값 로딩 중...</div>
+        ) : timeoutError ? (
+          <div className="error" style={{ color: '#dc2626' }}>오류: {timeoutError}</div>
+        ) : (
+          <div className="timeout-grid">
+            {['ultrasonic', 'temperature', 'humidity', 'pressure'].map(type => (
+              <div key={type} className="timeout-item">
+                <label className="timeout-label">
+                  {type === 'ultrasonic' ? '초음파' : type === 'temperature' ? '온도' : type === 'humidity' ? '습도' : '압력'}
+                </label>
+                <div className="timeout-input">
+                  <input
+                    type="number"
+                    min={10}
+                    max={3600}
+                    value={Math.floor((timeoutConfig?.[type]?.offline_timeout || 60000) / 1000)}
+                    onChange={(e) => handleTimeoutChange(type, e.target.value)}
+                  />
+                  <span className="unit">초</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="timeout-actions">
+          <button className="btn btn-secondary" onClick={resetTimeoutsToDefault}>🔄 기본값</button>
+          <button className="btn btn-primary" onClick={saveTimeouts}>💾 저장</button>
         </div>
       </div>
 
