@@ -295,9 +295,6 @@ export const SimulationProvider = ({ children }) => {
     const processingTime = endTime - startTime
 
     // 통계 업데이트 (처리시간 포함)
-    const endTime = performance.now()
-    const processingTime = endTime - startTime
-
     setSimulationStats(prev => {
       const newProcessingTimes = [...prev.processingTimes, processingTime]
       // 최근 20개 처리시간만 유지
