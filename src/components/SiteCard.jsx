@@ -1,55 +1,44 @@
 import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  STATUS_COLORS,
-  STATUS_LABELS,
-  getLegacySensorData,
-  extractSensorsFromSiteData,
-} from '../types/sensor'
+import { STATUS_COLORS, STATUS_LABELS, extractSensorsFromSiteData } from '../types/sensor'
 import { SITE_STATUS_LABELS, SITE_STATUS_COLORS } from '../types/site'
 
 const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, siteStatus = 'active' }) {
-  const { primarySensor, allSensors, statusColor, statusLabel, lastUpdate } = useMemo(() => {
-    const primary = getLegacySensorData(siteData)
+  const { allSensors, statusColor, statusLabel, lastUpdate } = useMemo(() => {
     const sensors = extractSensorsFromSiteData(siteData)
 
-    // 현장 상태에 따른 센서 상태 결정
-    let finalStatus, finalColor, finalLabel
-
-    if (siteStatus === 'active') {
-      // 활성 현장: 실제 센서 상태 사용하되, 데이터 신선도 확인
-      const now = Date.now()
-      const dataAge = primary?.timestamp ? (now - primary.timestamp) : Infinity
-      const isDataFresh = dataAge < 60000 // 1분 이내 데이터
-
-      if (primary?.status && isDataFresh) {
-        // 최신 데이터가 있으면 센서 상태 사용
-        finalStatus = primary.status
-        finalColor = STATUS_COLORS[finalStatus]
-        finalLabel = STATUS_LABELS[finalStatus]
-      } else {
-        // 오래된 데이터이면 오프라인으로 처리
-        finalStatus = 'offline'
-        finalColor = STATUS_COLORS.offline
-        finalLabel = '오프라인'
+    // 사이트가 활성 상태가 아니면 사이트 상태로 표기
+    if (siteStatus !== 'active') {
+      return {
+        allSensors: sensors,
+        statusColor: STATUS_COLORS.offline,
+        statusLabel: siteStatus === 'maintenance' ? '점검중' : '비활성',
+        lastUpdate: '업데이트 없음',
       }
-    } else {
-      // 점검중/비활성 현장: 강제로 오프라인 상태
-      finalStatus = 'offline'
-      finalColor = STATUS_COLORS.offline
-      finalLabel = siteStatus === 'maintenance' ? '점검중' : '비활성'
     }
 
-    const last = primary?.timestamp
-      ? new Date(primary.timestamp).toLocaleTimeString()
-      : '업데이트 없음'
+    // 대표 상태: 여러 센서 중 최악 상태, 동률이면 최신값
+    const SEVERITY = { offline: 0, normal: 1, warning: 2, alert: 3 }
+    let rep = { status: 'offline', timestamp: 0, severity: 0 }
+    for (const s of sensors) {
+      const st = s.data?.status || 'offline'
+      const ts = s.data?.timestamp || 0
+      const sev = SEVERITY[st] ?? 0
+      if (sev > rep.severity || (sev === rep.severity && ts > rep.timestamp)) {
+        rep = { status: st, timestamp: ts, severity: sev }
+      }
+    }
+
+    // 데이터 신선도 체크(1분 이내 아니면 오프라인 처리)
+    const now = Date.now()
+    const isFresh = rep.timestamp && (now - rep.timestamp) < 60000
+    const finalStatus = isFresh ? rep.status : 'offline'
 
     return {
-      primarySensor: primary,
       allSensors: sensors,
-      statusColor: finalColor,
-      statusLabel: finalLabel,
-      lastUpdate: last,
+      statusColor: STATUS_COLORS[finalStatus],
+      statusLabel: STATUS_LABELS[finalStatus] || finalStatus,
+      lastUpdate: rep.timestamp ? new Date(rep.timestamp).toLocaleTimeString() : '업데이트 없음',
     }
   }, [siteData, siteStatus])
 
