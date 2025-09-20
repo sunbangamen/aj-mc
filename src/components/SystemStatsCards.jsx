@@ -88,11 +88,11 @@ function SystemStatsCards({ allSites, connectionStatus }) {
 
   return (
     <div className="system-stats-section">
-      <div className="stats-header">
-        <h2>📊 시스템 현황</h2>
+      <div className="stats-header" style={{ alignItems: 'center' }}>
+        <h2 style={{ fontSize: '1.25rem' }}>📊 시스템 현황</h2>
         <div className="connection-indicator">
           <span className={`status-dot ${connectionStatus}`}></span>
-          <span className="status-text">
+          <span className="status-text" style={{ fontSize: '0.95rem' }}>
             {connectionStatus === 'connected' ? '실시간 연결' : '연결 안됨'}
           </span>
         </div>
@@ -111,11 +111,11 @@ function SystemStatsCards({ allSites, connectionStatus }) {
             <div className="stat-content">
               <div
                 className="stat-value"
-                style={{ color: STAT_COLORS[key] }}
+                style={{ color: STAT_COLORS[key], fontSize: '1.4rem', lineHeight: 1.2 }}
               >
                 {value}
               </div>
-              <div className="stat-label">
+              <div className="stat-label" style={{ fontSize: '0.95rem', color: '#374151' }}>
                 {STAT_LABELS[key]}
               </div>
             </div>
@@ -125,15 +125,15 @@ function SystemStatsCards({ allSites, connectionStatus }) {
 
       <div className="stats-summary">
         <div className="summary-item">
-          <span className="summary-label">연결된 현장:</span>
-          <span className="summary-value" style={{ color: STAT_COLORS.connected }}>
+          <span className="summary-label" style={{ fontSize: '0.95rem' }}>연결된 현장:</span>
+          <span className="summary-value" style={{ color: STAT_COLORS.connected, fontSize: '1rem', fontWeight: 600 }}>
             {stats.connected}/{stats.total}
           </span>
         </div>
         {stats.lastUpdate && (
           <div className="summary-item">
-            <span className="summary-label">마지막 업데이트:</span>
-            <span className="summary-value">
+            <span className="summary-label" style={{ fontSize: '0.95rem' }}>마지막 업데이트:</span>
+            <span className="summary-value" style={{ fontSize: '1rem' }}>
               {stats.lastUpdate}
             </span>
           </div>
@@ -143,8 +143,8 @@ function SystemStatsCards({ allSites, connectionStatus }) {
       {/* 상위 이슈(대표 상태 비정상인 현장) */}
       {topIssues.length > 0 && (
         <div className="top-issues" style={{ marginTop: 12 }}>
-          <div style={{ fontWeight: 600, marginBottom: 6 }}>주요 이슈</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8, fontSize: '1.1rem' }}>주요 이슈</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {topIssues.map(item => {
               const name = siteNameMap[item.siteId] || item.siteId
               const parsed = item.causeKey ? parseSensorKey(item.causeKey) : null
@@ -155,14 +155,16 @@ function SystemStatsCards({ allSites, connectionStatus }) {
                   key={item.siteId}
                   to={`/site/${item.siteId}`}
                   className="issue-row"
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'inherit' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'inherit', fontSize: '1rem' }}
                 >
-                  <span style={{ width: 12, height: 12, borderRadius: 6, background: color }}></span>
-                  <span style={{ fontWeight: 600 }}>{name}</span>
+                  <span style={{ width: 14, height: 14, borderRadius: 7, background: color }}></span>
+                  <span style={{ fontWeight: 700 }}>{name}</span>
                   <span style={{ color: '#6b7280' }}>•</span>
-                  <span>{item.status === 'alert' ? '경고' : item.status === 'warning' ? '주의' : item.status === 'offline' ? '오프라인' : item.status}</span>
+                  <span style={{ fontWeight: 600 }}>
+                    {item.status === 'alert' ? '경고' : item.status === 'warning' ? '주의' : item.status === 'offline' ? '오프라인' : item.status}
+                  </span>
                   {item.causeKey && (
-                    <span style={{ marginLeft: 'auto', fontSize: '0.9rem', fontWeight: 600, color: '#374151' }}>원인: {sensorLabel}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '1rem', fontWeight: 700, color: '#111827' }}>원인: {sensorLabel}</span>
                   )}
                 </Link>
               )
