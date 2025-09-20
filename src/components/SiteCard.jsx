@@ -23,14 +23,20 @@ const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, site
     return () => { mounted = false }
   }, [siteId])
 
-  const { allSensors, statusColor, statusLabel, lastUpdate } = useMemo(() => {
+  const { allSensors, statusColor, statusLabel, lastUpdate, causeKey } = useMemo(() => {
     const sensors = extractSensorsFromSiteData(siteData)
 
     if (siteStatus !== 'active') {
       return { allSensors: sensors, statusColor: STATUS_COLORS.offline, statusLabel: siteStatus === 'maintenance' ? '점검중' : '비활성', lastUpdate: '업데이트 없음' }
     }
     const rep = computeRepresentativeStatus(siteData, timeouts)
-    return { allSensors: sensors, statusColor: STATUS_COLORS[rep.status], statusLabel: STATUS_LABELS[rep.status] || rep.status, lastUpdate: rep.timestamp ? new Date(rep.timestamp).toLocaleTimeString() : '업데이트 없음' }
+    return {
+      allSensors: sensors,
+      statusColor: STATUS_COLORS[rep.status],
+      statusLabel: STATUS_LABELS[rep.status] || rep.status,
+      lastUpdate: rep.timestamp ? new Date(rep.timestamp).toLocaleTimeString() : '업데이트 없음',
+      causeKey: rep.causeKey,
+    }
   }, [siteData, siteStatus, timeouts])
 
   return (
@@ -53,8 +59,13 @@ const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, site
           </span>
         )}
       </h3>
-      <div className="status-badge" style={{ backgroundColor: statusColor }}>
+      <div className="status-badge" style={{ backgroundColor: statusColor, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
         {statusLabel}
+        {statusLabel !== '정상' && causeKey && (
+          <span className="rep-cause" title={`대표 상태 원인 센서: ${causeKey}`} style={{ background: '#ffffff33', borderRadius: 10, padding: '2px 6px', fontSize: '0.75rem' }}>
+            원인: {causeKey}
+          </span>
+        )}
       </div>
 
       {allSensors.length > 0 ? (

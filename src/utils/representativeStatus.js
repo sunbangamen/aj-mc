@@ -18,9 +18,11 @@ export const getTimeoutMs = (sensorType, thresholds, fallbackMs = 60000) => {
  */
 export const computeRepresentativeStatus = (siteData, thresholds, now = Date.now()) => {
   const sensors = extractSensorsFromSiteData(siteData)
-  if (!sensors || sensors.length === 0) return { status: 'offline', timestamp: 0 }
+  if (!sensors || sensors.length === 0) {
+    return { status: 'offline', timestamp: 0 }
+  }
 
-  let rep = { status: 'offline', timestamp: 0, severity: 0 }
+  let rep = { status: 'offline', timestamp: 0, severity: 0, causeKey: null, causeType: null }
   for (const s of sensors) {
     const st = s.data?.status || 'offline'
     const ts = s.data?.lastUpdate || s.data?.timestamp || 0
@@ -30,9 +32,9 @@ export const computeRepresentativeStatus = (siteData, thresholds, now = Date.now
     const effective = isFresh ? st : 'offline'
     const sev = SEVERITY[effective] ?? 0
     if (sev > rep.severity || (sev === rep.severity && ts > rep.timestamp)) {
-      rep = { status: effective, timestamp: ts, severity: sev }
+      rep = { status: effective, timestamp: ts, severity: sev, causeKey: s.key, causeType: sensorType }
     }
   }
-  return { status: rep.status, timestamp: rep.timestamp }
+  // 반환 시 내부 severity는 제외, 원인 키를 함께 제공
+  return { status: rep.status, timestamp: rep.timestamp, causeKey: rep.causeKey, causeType: rep.causeType }
 }
-
