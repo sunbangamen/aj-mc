@@ -51,7 +51,8 @@ const AdminPanel = () => {
     updateConfig,
     setAllSensorsStatus,
     availableModes,
-    availableStatuses
+    availableStatuses,
+    cleanupAllSensorKeys
   } = useSimulation()
 
   const handleThresholdSave = async (newThresholds) => {
@@ -379,6 +380,22 @@ const AdminPanel = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* 센서 키 정리 도구 */}
+              <div className="sensor-cleanup">
+                <h4>🧹 센서 키 정리</h4>
+                <p>중복된 센서 키를 정리합니다 (ultrasonic_1과 ultrasonic_01이 동시에 있는 경우)</p>
+                <button
+                  className="btn btn-warning"
+                  onClick={() => {
+                    if (confirm('모든 현장의 중복/레거시 센서 키를 정리하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+                      cleanupAllSensorKeys()
+                    }
+                  }}
+                >
+                  🧹 중복 센서 키 정리
+                </button>
               </div>
             </div>
           </div>

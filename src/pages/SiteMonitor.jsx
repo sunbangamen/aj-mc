@@ -124,8 +124,13 @@ function SiteMonitor() {
   }
 
   // 다중 센서 데이터 처리
+  console.log('🔍 [SiteMonitor] sensorData:', sensorData)
   const allSensors = extractSensorsFromSiteData(sensorData)
+  console.log('🔍 [SiteMonitor] allSensors:', allSensors)
+  console.log('🔍 [SiteMonitor] allSensors 키들:', allSensors.map(s => s.key))
+  console.log('🔍 [SiteMonitor] allSensors 개수:', allSensors.length)
   const primarySensor = getLegacySensorData(sensorData)
+  console.log('🔍 [SiteMonitor] primarySensor:', primarySensor)
 
   // 주 센서가 없으면 첫 번째 센서 사용
   const mainSensor = primarySensor || (allSensors.length > 0 ? allSensors[0].data : null)
@@ -175,52 +180,87 @@ function SiteMonitor() {
         <div className="site-thresholds-panel">
           <div className="panel-header">
             <h3>📊 현재 임계값 설정</h3>
-            <Link to={`/admin?tab=thresholds&siteId=${siteId}`} className="btn btn-sm btn-outline">
+            <Link
+              to={`/admin?tab=thresholds&siteId=${siteId}`}
+              className="btn btn-sm btn-primary"
+              style={{ backgroundColor: '#3b82f6', color: 'white', border: '1px solid #3b82f6' }}
+            >
               ⚙️ 설정 변경
             </Link>
           </div>
           <div className="thresholds-grid">
-            {Object.entries(siteThresholds && Object.keys(siteThresholds).length > 0 ? siteThresholds : thresholds).map(([sensorType, config]) => {
-              const sensorName = {
-                ultrasonic: '초음파',
-                temperature: '온도',
-                humidity: '습도',
-                pressure: '압력'
-              }[sensorType] || sensorType
+            {(() => {
+              // 현재 사이트에서 실제 사용 중인 센서 타입 추출
+              const activeSensorTypes = new Set()
 
-              const sensorUnit = {
-                ultrasonic: 'cm',
-                temperature: '°C',
-                humidity: '%',
-                pressure: 'hPa'
-              }[sensorType] || ''
+              // allSensors에서 센서 타입 추출
+              allSensors.forEach(sensor => {
+                const sensorType = sensor.key.split('_')[0] // ultrasonic_1 -> ultrasonic
+                activeSensorTypes.add(sensorType)
+              })
 
-              return (
-                <div key={sensorType} className="threshold-info-card">
-                  <h4>{sensorName} 센서</h4>
-                  <div className="threshold-ranges">
-                    <div className="range-item warning">
-                      <span className="range-label">⚠️ 경고</span>
-                      <span className="range-value">
-                        {config.warning.min} ~ {config.warning.max} {sensorUnit}
-                      </span>
-                    </div>
-                    <div className="range-item alert">
-                      <span className="range-label">🚨 위험</span>
-                      <span className="range-value">
-                        {config.alert.min} ~ {config.alert.max} {sensorUnit}
-                      </span>
-                    </div>
-                    <div className="range-item timeout">
-                      <span className="range-label">📵 오프라인</span>
-                      <span className="range-value">
-                        {Math.round(config.offline_timeout / 1000)}초 초과
-                      </span>
+              // 기존 단일 센서 지원 (legacy)
+              if (sensorData?.distance !== undefined) {
+                activeSensorTypes.add('ultrasonic')
+              }
+              if (sensorData?.temperature !== undefined) {
+                activeSensorTypes.add('temperature')
+              }
+              if (sensorData?.humidity !== undefined) {
+                activeSensorTypes.add('humidity')
+              }
+              if (sensorData?.pressure !== undefined) {
+                activeSensorTypes.add('pressure')
+              }
+
+              const currentThresholds = siteThresholds && Object.keys(siteThresholds).length > 0 ? siteThresholds : thresholds
+
+              // 활성 센서 타입과 임계값이 모두 있는 센서만 표시
+              return Array.from(activeSensorTypes).filter(sensorType =>
+                currentThresholds[sensorType]
+              ).map(sensorType => {
+                const config = currentThresholds[sensorType]
+                const sensorName = {
+                  ultrasonic: '초음파',
+                  temperature: '온도',
+                  humidity: '습도',
+                  pressure: '압력'
+                }[sensorType] || sensorType
+
+                const sensorUnit = {
+                  ultrasonic: 'cm',
+                  temperature: '°C',
+                  humidity: '%',
+                  pressure: 'hPa'
+                }[sensorType] || ''
+
+                return (
+                  <div key={sensorType} className="threshold-info-card">
+                    <h4>{sensorName} 센서</h4>
+                    <div className="threshold-ranges">
+                      <div className="range-item warning">
+                        <span className="range-label">⚠️ 경고</span>
+                        <span className="range-value">
+                          {config.warning.min} ~ {config.warning.max} {sensorUnit}
+                        </span>
+                      </div>
+                      <div className="range-item alert">
+                        <span className="range-label">🚨 위험</span>
+                        <span className="range-value">
+                          {config.alert.min} ~ {config.alert.max} {sensorUnit}
+                        </span>
+                      </div>
+                      <div className="range-item timeout">
+                        <span className="range-label">📵 오프라인</span>
+                        <span className="range-value">
+                          {Math.round(config.offline_timeout / 1000)}초 초과
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+            })()}
           </div>
         </div>
       )}
@@ -298,64 +338,89 @@ function SiteMonitor() {
       </div>
 
       {/* 센서별 차트 및 테이블 섹션 */}
-      {allSensors.length > 0 ? (
+      {(allSensors.length > 0 || sensorData) ? (
         <div className="sensors-monitoring-section">
           <h2>📊 센서별 상세 모니터링</h2>
-          {allSensors.map((sensor, index) => (
-            <div key={sensor.key} className="individual-sensor-section">
-              <div className="sensor-section-header">
-                <h3>
-                  {sensor.displayName}
-                  <span className="sensor-location">({sensor.location})</span>
-                </h3>
-                <div className="sensor-current-status">
-                  <span
-                    className="status-indicator"
-                    style={{
-                      backgroundColor: STATUS_COLORS[sensor.data?.status || 'offline'],
-                      color: 'white',
-                      padding: '4px 12px',
-                      borderRadius: '12px',
-                      fontSize: '0.85rem',
-                      fontWeight: '600'
-                    }}
-                  >
-                    {STATUS_LABELS[sensor.data?.status || 'offline']}
-                  </span>
-                  <span className="current-value">
-                    현재: {sensor.value || '---'} {sensor.unit}
-                  </span>
+          {allSensors.length > 0 ? (
+            allSensors.map((sensor, index) => (
+              <div key={sensor.key} className="individual-sensor-section">
+                <div className="sensor-section-header">
+                  <h3>
+                    {sensor.displayName}
+                    <span className="sensor-location">({sensor.location})</span>
+                  </h3>
+                  <div className="sensor-current-status">
+                    <span
+                      className="status-indicator"
+                      style={{
+                        backgroundColor: STATUS_COLORS[sensor.data?.status || 'offline'],
+                        color: 'white',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '0.85rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      {STATUS_LABELS[sensor.data?.status || 'offline']}
+                    </span>
+                    <span className="current-value">
+                      현재: {sensor.value || '---'} {sensor.unit}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              {/* 개별 센서 차트 */}
+                {/* 개별 센서 차트 */}
+                <SensorChart
+                  siteId={siteId}
+                  sensorKey={sensor.key}
+                  sensorData={sensor.data}
+                  limit={20}
+                  height={300}
+                  connectionStatus={connectionStatus}
+                  sensorName={sensor.displayName}
+                />
+
+                {/* Phase 14D: 하드웨어 상태 정보 패널 */}
+                <HardwareStatusPanel
+                  sensorData={sensor.data}
+                  sensorKey={sensor.key}
+                />
+
+                {/* 개별 센서 측정 이력 테이블 */}
+                <MeasurementTable
+                  siteId={siteId}
+                  sensorKey={sensor.key}
+                  sensorData={sensor.data}
+                  limit={15}
+                  connectionStatus={connectionStatus}
+                  sensorName={sensor.displayName}
+                />
+              </div>
+            ))
+          ) : (
+            // allSensors가 비어있지만 sensorData가 있는 경우의 폴백
+            <div className="fallback-sensor-section">
+              <h3>📊 기본 센서 모니터링</h3>
+              <p>⚠️ 센서 추출 실패 - 기본 차트로 표시합니다.</p>
               <SensorChart
                 siteId={siteId}
-                sensorKey={sensor.key}
-                sensorData={sensor.data}
+                sensorKey="primary"
+                sensorData={mainSensor}
                 limit={20}
                 height={300}
                 connectionStatus={connectionStatus}
-                sensorName={sensor.displayName}
+                sensorName="기본 센서"
               />
-
-              {/* Phase 14D: 하드웨어 상태 정보 패널 */}
-              <HardwareStatusPanel
-                sensorData={sensor.data}
-                sensorKey={sensor.key}
-              />
-
-              {/* 개별 센서 측정 이력 테이블 */}
               <MeasurementTable
                 siteId={siteId}
-                sensorKey={sensor.key}
-                sensorData={sensor.data}
+                sensorKey="primary"
+                sensorData={mainSensor}
                 limit={15}
                 connectionStatus={connectionStatus}
-                sensorName={sensor.displayName}
+                sensorName="기본 센서"
               />
             </div>
-          ))}
+          )}
         </div>
       ) : (
         <div className="no-sensors-monitoring">
