@@ -66,12 +66,12 @@
  * 다중 센서 지원 현장 데이터 타입
  * @typedef {Object} MultiSensorSiteData
  * @property {UltrasonicSensorData & {history?: Object.<string, UltrasonicSensorData>}} [ultrasonic] - 단일 초음파 센서 (하위 호환성)
- * @property {UltrasonicSensorData & {history?: Object.<string, UltrasonicSensorData>}} [ultrasonic_01] - 첫 번째 초음파 센서
- * @property {UltrasonicSensorData & {history?: Object.<string, UltrasonicSensorData>}} [ultrasonic_02] - 두 번째 초음파 센서
- * @property {UltrasonicSensorData & {history?: Object.<string, UltrasonicSensorData>}} [ultrasonic_03] - 세 번째 초음파 센서
- * @property {TemperatureSensorData & {history?: Object.<string, TemperatureSensorData>}} [temperature_01] - 첫 번째 온도 센서
- * @property {HumiditySensorData & {history?: Object.<string, HumiditySensorData>}} [humidity_01] - 첫 번째 습도 센서
- * @property {PressureSensorData & {history?: Object.<string, PressureSensorData>}} [pressure_01] - 첫 번째 압력 센서
+ * @property {UltrasonicSensorData & {history?: Object.<string, UltrasonicSensorData>}} [ultrasonic_1] - 첫 번째 초음파 센서
+ * @property {UltrasonicSensorData & {history?: Object.<string, UltrasonicSensorData>}} [ultrasonic_2] - 두 번째 초음파 센서
+ * @property {UltrasonicSensorData & {history?: Object.<string, UltrasonicSensorData>}} [ultrasonic_3] - 세 번째 초음파 센서
+ * @property {TemperatureSensorData & {history?: Object.<string, TemperatureSensorData>}} [temperature_1] - 첫 번째 온도 센서
+ * @property {HumiditySensorData & {history?: Object.<string, HumiditySensorData>}} [humidity_1] - 첫 번째 습도 센서
+ * @property {PressureSensorData & {history?: Object.<string, PressureSensorData>}} [pressure_1] - 첫 번째 압력 센서
  */
 
 /**
@@ -237,6 +237,40 @@ export const getSensorUnit = (sensorType) => {
   return ''
 }
 
+// 센서 키 생성 유틸리티 함수들
+export const generateSensorKey = (sensorType, sensorNumber) => {
+  return `${sensorType}_${Number(sensorNumber)}`
+}
+
+export const parseSensorKey = (sensorKey) => {
+  const parts = sensorKey.split('_')
+  if (parts.length !== 2) return null
+
+  const sensorType = parts[0]
+  const sensorNumber = parseInt(parts[1], 10)
+
+  return { sensorType, sensorNumber }
+}
+
+// Firebase 경로 생성 함수들
+export const getSensorPath = (siteId, sensorKey) => {
+  return `sensors/${siteId}/${sensorKey}`
+}
+
+export const getSensorHistoryPath = (siteId, sensorKey, timestamp = null) => {
+  const basePath = `sensors/${siteId}/${sensorKey}/history`
+  return timestamp ? `${basePath}/${timestamp}` : basePath
+}
+
+// Firebase 데이터 변환 유틸리티 함수
+export const transformFirebaseObjectToArray = (firebaseObject) => {
+  if (!firebaseObject) return []
+  return Object.entries(firebaseObject).map(([id, data]) => ({
+    id,
+    ...data
+  }))
+}
+
 // 센서 타입별 한글명 반환 함수
 export const getSensorDisplayName = (sensorType) => {
   if (sensorType.startsWith('ultrasonic')) return '초음파'
@@ -270,7 +304,7 @@ export const extractSensorsFromSiteData = (siteData) => {
 
   const seenNormalized = new Set()
   Object.entries(siteData).forEach(([sensorKey, sensorData]) => {
-    debug('🔍 처리 중인 센서 키:', sensorKey, '데이터 유무:', !!sensorData)
+  debug('🔍 처리 중인 센서 키:', sensorKey, '데이터 유무:', !!sensorData)
 
     if (sensorKey === 'history') {
       debug('⏭️ 히스토리 키 건너뜀')
@@ -302,7 +336,7 @@ export const extractSensorsFromSiteData = (siteData) => {
     const formattedValue = formatSensorValue(rawValue)
 
     const sensor = {
-      key: sensorKey, // 원본 Firebase 키 사용 (ultrasonic_01 유지)
+      key: sensorKey, // 원본 Firebase 키 사용
       normalizedKey: normalizedKey, // 정규화된 키도 보관 (표시용)
       type: sensorType,
       number: normalizedNumber,
@@ -332,9 +366,9 @@ export const getLegacySensorData = (siteData) => {
   const sensorPriority = ['ultrasonic', 'temperature', 'humidity', 'pressure']
 
   for (const sensorType of sensorPriority) {
-    // 새 구조 우선 사용(패딩/비패딩 모두 지원)
-    if (siteData[`${sensorType}_01`]) return siteData[`${sensorType}_01`]
+    // 새 구조 우선 사용(비패딩 우선, 패딩도 지원)
     if (siteData[`${sensorType}_1`]) return siteData[`${sensorType}_1`]
+    if (siteData[`${sensorType}_01`]) return siteData[`${sensorType}_01`]
 
     // 기존 구조 (단일 키) 마지막에 사용
     if (siteData[sensorType]) return siteData[sensorType]

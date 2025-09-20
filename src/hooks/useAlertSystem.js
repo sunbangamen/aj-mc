@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { ref, set, get, onValue, update, push } from 'firebase/database'
 import { database } from '../services/firebase'
 import {
@@ -39,7 +39,7 @@ export const useAlertSystem = () => {
   /**
    * 임계값 설정 로드 (사이트별 + 전역 기본값)
    */
-  const loadThresholds = async (siteId = null) => {
+  const loadThresholds = useCallback(async (siteId = null) => {
     try {
       // Cache hit (30s TTL)
       const cacheKey = siteId || '__global__'
@@ -88,7 +88,7 @@ export const useAlertSystem = () => {
       logError('임계값 로드 오류:', error)
       return DEFAULT_THRESHOLDS
     }
-  }
+  }, [])
 
   /**
    * 임계값 설정 저장 (전역 또는 사이트별)
@@ -116,9 +116,9 @@ export const useAlertSystem = () => {
   /**
    * 특정 사이트의 임계값 로드
    */
-  const loadSiteThresholds = async (siteId) => {
+  const loadSiteThresholds = useCallback(async (siteId) => {
     return await loadThresholds(siteId)
-  }
+  }, [loadThresholds])
 
   /**
    * 센서 데이터 기반 경고 생성 및 저장
