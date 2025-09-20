@@ -241,24 +241,28 @@ const HardwareMetadataPanel = () => {
         ) : timeoutError ? (
           <div className="error" style={{ color: '#dc2626' }}>오류: {timeoutError}</div>
         ) : (
-          <div className="timeout-grid">
-            {activeTimeoutTypes.map(type => (
-              <div key={type} className="timeout-item">
-                <label className="timeout-label">
-                  {type === 'ultrasonic' ? '초음파' : type === 'temperature' ? '온도' : type === 'humidity' ? '습도' : '압력'}
-                </label>
-                <div className="timeout-input">
+          <div className="timeout-compact" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {activeTimeoutTypes.map(type => {
+              const label = type === 'ultrasonic' ? '초음파' : type === 'temperature' ? '온도' : type === 'humidity' ? '습도' : '압력'
+              const currentSec = Math.floor((timeoutConfig?.[type]?.offline_timeout || DEFAULT_THRESHOLDS?.[type]?.offline_timeout || 60000) / 1000)
+              return (
+                <label key={type} className="timeout-line" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="t-label" style={{ minWidth: 56, fontWeight: 600 }}>{label}</span>
                   <input
                     type="number"
                     min={10}
                     max={3600}
-                    value={Math.floor((timeoutConfig?.[type]?.offline_timeout || DEFAULT_THRESHOLDS?.[type]?.offline_timeout || 60000) / 1000)}
+                    value={currentSec}
                     onChange={(e) => handleTimeoutChange(type, e.target.value)}
+                    style={{ width: 72, padding: '4px 6px' }}
                   />
-                  <span className="unit">초</span>
-                </div>
-              </div>
-            ))}
+                  <span style={{ color: '#6b7280' }}>초</span>
+                </label>
+              )
+            })}
+            <div className="timeout-hint" style={{ color: '#6b7280', fontSize: 12 }}>
+              설정 시간 초과 시 해당 센서를 오프라인으로 간주합니다.
+            </div>
           </div>
         )}
         <div className="timeout-actions">
