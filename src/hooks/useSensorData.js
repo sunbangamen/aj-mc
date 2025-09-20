@@ -3,6 +3,7 @@ import { ref, onValue, off, query, orderByKey, limitToLast } from 'firebase/data
 import { database } from '../services/firebase'
 import { debug, error as logError } from '../utils/log'
 import { useThrottledState } from './useThrottledState'
+import { useSites } from './useSiteManagement'
 
 /**
  * 실시간 센서 데이터를 관리하는 커스텀 훅
@@ -83,22 +84,64 @@ export const useSensorData = (siteId = null) => {
  * @returns {Object} { allSites, loading, error, connectionStatus }
  */
 export const useAllSensorData = () => {
-  const { data, loading, error, connectionStatus } = useSensorData()
+  const { sites, loading: sitesLoading, error: sitesError, connectionStatus: sitesConn } = useSites()
+  const [siteMap, setSiteMapThrottled, setSiteMapImmediate] = useThrottledState({}, 150)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [connectionStatus, setConnectionStatus] = useState('connecting')
 
-  // 데이터를 배열 형태로 변환
-  const allSites = data
-    ? Object.entries(data).map(([siteId, siteData]) => ({
-        siteId,
-        ...siteData,
-      }))
-    : []
+  useEffect(() => {
+    if (sitesLoading) return
 
-  return {
-    allSites,
-    loading,
-    error,
-    connectionStatus,
-  }
+    const unsubscribers = []
+    setError(null)
+
+    // 사이트가 없으면 초기화만
+    if (!sites || sites.length === 0) {
+      setSiteMapImmediate({})
+      setLoading(false)
+      setConnectionStatus(sitesConn)
+      return
+    }
+
+    // 각 사이트별로 분할 구독
+    sites.forEach(site => {
+      const siteId = site.id
+      const dataRef = ref(database, `sensors/${siteId}`)
+      const unsubscribe = onValue(
+        dataRef,
+        snap => {
+          try {
+            const val = snap.val() || {}
+            setSiteMapThrottled(prev => ({ ...prev, [siteId]: val }))
+            setConnectionStatus('connected')
+            setLoading(false)
+          } catch (e) {
+            logError('사이트 센서 데이터 처리 오류:', e)
+            setError(e.message)
+            setConnectionStatus('error')
+            setLoading(false)
+          }
+        },
+        e => {
+          logError('사이트 센서 구독 오류:', e)
+          setError(e.message)
+          setConnectionStatus('error')
+          setLoading(false)
+        }
+      )
+      unsubscribers.push(() => off(dataRef))
+      unsubscribers.push(unsubscribe)
+    })
+
+    return () => {
+      unsubscribers.forEach(fn => { try { fn && fn() } catch {} })
+    }
+  }, [sitesLoading, JSON.stringify(sites)])
+
+  const allSites = Object.entries(siteMap).map(([siteId, siteData]) => ({ siteId, ...siteData }))
+
+  return { allSites, loading, error: error || sitesError, connectionStatus }
 }
 
 /**
