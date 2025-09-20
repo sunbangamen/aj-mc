@@ -64,6 +64,45 @@ export const getRandomInRange = (min, max, decimals = 0) => {
 }
 
 /**
+ * Phase 10A: 센서 위치 정보 생성
+ */
+export const generateSensorLocation = (sensorType, sensorNumber = 1) => {
+  const zones = ['A', 'B', 'C', 'D']
+  const directions = ['북동', '북서', '남동', '남서', '중앙']
+  const areas = ['1구역', '2구역', '3구역', '4구역', '5구역']
+
+  // 센서 타입별 설치 위치 패턴
+  const locationPatterns = {
+    ultrasonic: ['수위 측정점', '배수구 입구', '저수조 상단', '펌프실 내부'],
+    temperature: ['실내 센서박스', '야외 차양막', '기계실 내부', '제어반 근처'],
+    humidity: ['습도 측정소', '환기구 근처', '밀폐공간 내부', '외부 노출부'],
+    pressure: ['압력계 연결부', '배관 중간점', '펌프 출구', '시스템 헤더']
+  }
+
+  const zone = zones[Math.floor(Math.random() * zones.length)]
+  const direction = directions[Math.floor(Math.random() * directions.length)]
+  const area = areas[Math.floor(Math.random() * areas.length)]
+  const pattern = locationPatterns[sensorType] || locationPatterns.ultrasonic
+  const specificLocation = pattern[Math.floor(Math.random() * pattern.length)]
+
+  return {
+    location: `${area} ${direction}`, // 기본 위치 (기존 호환성)
+    detailedLocation: `${zone}구역 ${area} ${direction} ${specificLocation}`, // 상세 위치
+    zone: zone,
+    area: area.replace('구역', ''),
+    direction: direction,
+    specificLocation: specificLocation,
+    // CSS Grid 위치 (4x3 그리드 기준)
+    gridPosition: `area-${zone}-${sensorNumber}`,
+    // SVG 좌표 (800x600 기준)
+    coordinates: {
+      x: Math.floor(Math.random() * 700) + 50, // 50-750
+      y: Math.floor(Math.random() * 500) + 50  // 50-550
+    }
+  }
+}
+
+/**
  * Phase 14D: 하드웨어 메타데이터 생성
  */
 export const generateHardwareMetadata = (sensorType = 'ultrasonic') => {
@@ -117,27 +156,37 @@ export const generateQualityMetrics = (status) => {
 }
 
 /**
- * 초음파 센서 데이터 생성
+ * 초음파 센서 데이터 생성 (위치 정보 포함)
  */
-export const generateUltrasonicData = (forceStatus = null) => {
+export const generateUltrasonicData = (forceStatus = null, sensorNumber = 1, includeLocation = true) => {
   const status = forceStatus || getRandomStatus()
   const config = SENSOR_SIMULATION_CONFIG.ultrasonic[status]
   const timestamp = Date.now()
 
+  const baseData = {
+    status: status === 'offline' ? 'offline' : config.status,
+    timestamp,
+    lastUpdate: timestamp
+  }
+
+  // 위치 정보 추가
+  if (includeLocation) {
+    const locationInfo = generateSensorLocation('ultrasonic', sensorNumber)
+    Object.assign(baseData, locationInfo)
+  }
+
   if (status === 'offline') {
     return {
-      distance: null,
-      status: 'offline',
-      timestamp,
-      lastUpdate: timestamp
+      ...baseData,
+      distance: null
     }
   }
 
   const distance = getRandomInRange(config.min, config.max)
 
   return {
+    ...baseData,
     distance,
-    status: config.status,
     timestamp,
     lastUpdate: timestamp,
 
@@ -149,28 +198,39 @@ export const generateUltrasonicData = (forceStatus = null) => {
 }
 
 /**
- * 온도 센서 데이터 생성
+ * 온도 센서 데이터 생성 (위치 정보 포함)
  */
-export const generateTemperatureData = (forceStatus = null) => {
+export const generateTemperatureData = (forceStatus = null, sensorNumber = 1, includeLocation = true) => {
   const status = forceStatus || getRandomStatus()
   const config = SENSOR_SIMULATION_CONFIG.temperature[status]
   const timestamp = Date.now()
 
+  const baseData = {
+    status: status === 'offline' ? 'offline' : config.status,
+    timestamp,
+    lastUpdate: timestamp
+  }
+
+  // 위치 정보 추가
+  if (includeLocation) {
+    const locationInfo = generateSensorLocation('temperature', sensorNumber)
+    Object.assign(baseData, locationInfo)
+  }
+
   if (status === 'offline') {
     return {
+      ...baseData,
       temperature: null,
-      status: 'offline',
-      timestamp,
-      lastUpdate: timestamp
+      value: null
     }
   }
 
   const temperature = getRandomInRange(config.min, config.max, 1)
 
   return {
+    ...baseData,
     value: temperature, // 온도는 value 키 사용
     temperature, // 하위 호환성
-    status: config.status,
     timestamp,
     lastUpdate: timestamp,
 
@@ -258,14 +318,14 @@ export const SENSOR_GENERATORS = {
 }
 
 /**
- * 특정 센서 타입의 데이터 생성
+ * 특정 센서 타입의 데이터 생성 (위치 정보 포함)
  */
-export const generateSensorData = (sensorType, forceStatus = null) => {
+export const generateSensorData = (sensorType, forceStatus = null, sensorNumber = 1, includeLocation = true) => {
   const generator = SENSOR_GENERATORS[sensorType]
   if (!generator) {
     throw new Error(`Unknown sensor type: ${sensorType}`)
   }
-  return generator(forceStatus)
+  return generator(forceStatus, sensorNumber, includeLocation)
 }
 
 /**

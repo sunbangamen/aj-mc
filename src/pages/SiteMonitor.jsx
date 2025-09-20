@@ -8,6 +8,9 @@ import MeasurementTable from '../components/MeasurementTable'
 import SensorChart from '../components/SensorChart'
 import HardwareStatusPanel from '../components/HardwareStatusPanel'
 import AlertBanner from '../components/AlertBanner'
+import SensorLocationMap from '../components/SensorLocationMap'
+import SensorLocationEditor from '../components/SensorLocationEditor'
+import '../styles/SensorLocationMap.css'
 
 function SiteMonitor() {
   const { siteId } = useParams()
@@ -78,6 +81,13 @@ function SiteMonitor() {
 
   // 현재 사이트의 알림만 필터링
   const siteAlerts = alerts.filter(alert => alert.siteId === siteId)
+
+  // 센서 위치 업데이트 핸들러
+  const handleLocationUpdate = (sensorKey, newLocation) => {
+    console.log(`📍 센서 위치 업데이트: ${sensorKey} → ${newLocation}`)
+    // 실시간 데이터가 자동으로 반영되므로 별도 처리 불필요
+    // useSiteSensorData 훅이 Firebase 변경사항을 자동으로 감지합니다
+  }
 
   // 사이트 이름 가져오기 (동적)
   const getSiteName = () => {
@@ -265,32 +275,22 @@ function SiteMonitor() {
         </div>
       )}
 
-      {/* 다중 센서 표시 */}
-      {allSensors.length > 1 && (
-        <div className="multi-sensor-overview">
-          <h2>📊 전체 센서 현황 ({allSensors.length}개)</h2>
-          <div className="sensors-grid">
-            {allSensors.map((sensor) => (
-              <div key={sensor.key} className="mini-sensor-card">
-                <h4>{sensor.displayName}</h4>
-                <div className="sensor-value-display">
-                  <span style={{ color: STATUS_COLORS[sensor.data.status] || STATUS_COLORS.offline }}>
-                    {sensor.value || '---'} {sensor.unit}
-                  </span>
-                </div>
-                <div className="mini-status-badge" style={{
-                  backgroundColor: STATUS_COLORS[sensor.data.status] || STATUS_COLORS.offline
-                }}>
-                  {STATUS_LABELS[sensor.data.status] || STATUS_LABELS.offline}
-                </div>
-                {sensor.location && (
-                  <p className="sensor-location">📍 {sensor.location}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* 센서 위치 맵 */}
+      {allSensors.length > 0 && (
+        <SensorLocationMap
+          sensors={allSensors}
+          siteId={siteId}
+          onSensorClick={(sensor) => {
+            // 센서 클릭 시 해당 센서 섹션으로 스크롤
+            const sensorSection = document.getElementById(`sensor-section-${sensor.key}`)
+            if (sensorSection) {
+              sensorSection.scrollIntoView({ behavior: 'smooth' })
+            }
+          }}
+          onLocationUpdate={handleLocationUpdate}
+        />
       )}
+
 
       <div className="site-info-grid">
         <div className="current-data">
@@ -343,11 +343,17 @@ function SiteMonitor() {
           <h2>📊 센서별 상세 모니터링</h2>
           {allSensors.length > 0 ? (
             allSensors.map((sensor, index) => (
-              <div key={sensor.key} className="individual-sensor-section">
+              <div key={sensor.key} className="individual-sensor-section" id={`sensor-section-${sensor.key}`}>
                 <div className="sensor-section-header">
                   <h3>
                     {sensor.displayName}
-                    <span className="sensor-location">({sensor.location})</span>
+                    <SensorLocationEditor
+                      siteId={siteId}
+                      sensorKey={sensor.key}
+                      currentLocation={sensor.location}
+                      onLocationUpdate={handleLocationUpdate}
+                      compact={false}
+                    />
                   </h3>
                   <div className="sensor-current-status">
                     <span
