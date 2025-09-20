@@ -162,7 +162,7 @@ function SystemStatsCards({ allSites, connectionStatus }) {
                   <span style={{ color: '#6b7280' }}>•</span>
                   <span>{item.status === 'alert' ? '경고' : item.status === 'warning' ? '주의' : item.status === 'offline' ? '오프라인' : item.status}</span>
                   {item.causeKey && (
-                    <span style={{ marginLeft: 'auto', fontSize: 12, color: '#6b7280' }}>원인: {sensorLabel} ↗</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.9rem', fontWeight: 600, color: '#374151' }}>원인: {sensorLabel}</span>
                   )}
                 </Link>
               )

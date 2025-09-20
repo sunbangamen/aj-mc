@@ -68,7 +68,14 @@ const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, site
             <span
               className="rep-cause"
               title={`대표 상태 원인 센서: ${label}`}
-              style={{ background: '#ffffff33', borderRadius: 10, padding: '2px 6px', fontSize: '0.75rem' }}
+              style={{
+                background: '#ffffff33',
+                borderRadius: 10,
+                padding: '2px 8px',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                letterSpacing: '0.2px'
+              }}
             >
               원인: {label}
             </span>
