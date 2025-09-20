@@ -1,5 +1,6 @@
 import { ref, set, get, remove, update } from 'firebase/database'
 import { database } from '../services/firebase'
+import { debug, error as logError } from './log'
 import {
   generateHardwareMetadata,
   generateMaintenanceInfo,
@@ -17,7 +18,7 @@ export const createTestSite = async () => {
     const snapshot = await get(siteRef)
 
     if (snapshot.exists()) {
-      console.log('✅ 테스트 사이트가 이미 존재합니다.')
+      debug('✅ 테스트 사이트가 이미 존재합니다.')
       return { success: true, message: '테스트 사이트가 이미 존재합니다.' }
     }
 
@@ -36,11 +37,11 @@ export const createTestSite = async () => {
     // Firebase에 저장
     await set(siteRef, testSiteData)
 
-    console.log('✅ 테스트 사이트가 생성되었습니다.')
+    debug('✅ 테스트 사이트가 생성되었습니다.')
     return { success: true, message: '테스트 사이트가 생성되었습니다.' }
 
   } catch (error) {
-    console.error('❌ 테스트 사이트 생성 오류:', error)
+    logError('❌ 테스트 사이트 생성 오류:', error)
     return { success: false, error: error.message }
   }
 }
@@ -68,7 +69,7 @@ export const createTestSensorData = async () => {
         const data = legacySnap.val()
         await set(numberedRef, data)
         await remove(legacyRef)
-        console.log(`🔁 테스트 센서 데이터를 ${type} → ${type}_1 으로 마이그레이션했습니다.`)
+        debug(`🔁 테스트 센서 데이터를 ${type} → ${type}_1 으로 마이그레이션했습니다.`)
         results.push(`${type}: migrated to ${type}_1`)
         continue
       }
@@ -76,7 +77,7 @@ export const createTestSensorData = async () => {
       // 2) 둘 다 존재하면 legacy 제거(표시는 numbered 기준)
       if (legacySnap.exists() && numberedSnap.exists()) {
         await remove(legacyRef)
-        console.log(`🧹 레거시 ${type} 센서를 제거했습니다. (${type}_1 유지)`) 
+        debug(`🧹 레거시 ${type} 센서를 제거했습니다. (${type}_1 유지)`) 
         results.push(`${type}: legacy removed, kept ${type}_1`)
         continue
       }
@@ -98,7 +99,7 @@ export const createTestSensorData = async () => {
           ...generateQualityMetrics(status)
         }
         await set(numberedRef, testSensorData)
-        console.log('✅ 테스트 센서 데이터(ultrasonic_1)가 생성되었습니다.')
+        debug('✅ 테스트 센서 데이터(ultrasonic_1)가 생성되었습니다.')
         results.push('ultrasonic: created ultrasonic_1')
       }
     }
@@ -121,7 +122,7 @@ export const createTestSensorData = async () => {
     return { success: true, message: results.join('; ') || '변경 없음' }
 
   } catch (error) {
-    console.error('❌ 테스트 센서 데이터 생성/마이그레이션 오류:', error)
+    logError('❌ 테스트 센서 데이터 생성/마이그레이션 오류:', error)
     return { success: false, error: error.message }
   }
 }
@@ -131,13 +132,13 @@ export const createTestSensorData = async () => {
  */
 export const initializeTestEnvironment = async () => {
   try {
-    console.log('🚀 테스트 환경 초기화 시작...')
+    debug('🚀 테스트 환경 초기화 시작...')
 
     const siteResult = await createTestSite()
     const sensorResult = await createTestSensorData()
 
     if (siteResult.success && sensorResult.success) {
-      console.log('✅ 테스트 환경 초기화 완료')
+      debug('✅ 테스트 환경 초기화 완료')
       return {
         success: true,
         message: '테스트 환경이 준비되었습니다. 페이지를 새로고침해주세요.'
@@ -147,7 +148,7 @@ export const initializeTestEnvironment = async () => {
     }
 
   } catch (error) {
-    console.error('❌ 테스트 환경 초기화 오류:', error)
+    logError('❌ 테스트 환경 초기화 오류:', error)
     return { success: false, error: error.message }
   }
 }

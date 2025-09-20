@@ -4,7 +4,7 @@ import { useSiteSensorData } from '../hooks/useSensorData'
 import { useSite } from '../hooks/useSiteManagement'
 import { STATUS_COLORS, STATUS_LABELS, extractSensorsFromSiteData, getLegacySensorData } from '../types/sensor'
 import { useAlertSystem } from '../hooks/useAlertSystem'
-import { debug } from '../utils/log'
+import { debug, error as logError } from '../utils/log'
 import MeasurementTable from '../components/MeasurementTable'
 import SensorChart from '../components/SensorChart'
 import HardwareStatusPanel from '../components/HardwareStatusPanel'
@@ -56,7 +56,7 @@ function SiteMonitor() {
         }
       } catch (error) {
         if (mounted.current) {
-          console.error('사이트 임계값 로드 오류:', error)
+          logError('사이트 임계값 로드 오류:', error)
           setSiteThresholds(thresholdsRef.current) // 기본값 사용
           setThresholdsLoaded(true)
         }

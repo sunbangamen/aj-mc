@@ -98,17 +98,17 @@ export const useAlertSystem = () => {
       let thresholdsRef
       if (siteId) {
         thresholdsRef = ref(database, `settings/thresholds/sites/${siteId}`)
-        console.log(`✅ ${siteId} 사이트별 임계값 설정 저장 완료`)
+        debug(`✅ ${siteId} 사이트별 임계값 설정 저장 완료`)
       } else {
         thresholdsRef = ref(database, 'settings/thresholds/global')
-        console.log('✅ 전역 임계값 설정 저장 완료')
+        debug('✅ 전역 임계값 설정 저장 완료')
       }
 
       await set(thresholdsRef, newThresholds)
       setThresholds(newThresholds)
       return true
     } catch (error) {
-      console.error('임계값 저장 오류:', error)
+      logError('임계값 저장 오류:', error)
       return false
     }
   }

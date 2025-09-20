@@ -103,7 +103,7 @@ const AlertBanner = ({ alerts, onAcknowledge, onDismiss, compact = false, siteNa
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              console.log('펼치기/접기 버튼 클릭:', !minimized)
+              // debug log suppressed in production
               setMinimized(!minimized)
             }}
             className="alert-action-btn toggle"
