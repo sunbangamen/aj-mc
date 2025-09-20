@@ -434,8 +434,8 @@ export const SimulationProvider = ({ children }) => {
           const sensorKey = generateSensorKey(sensorType, sensorNum)
           const sensorRef = ref(database, getSensorPath(site.id, sensorKey))
 
-          // 오프라인 상태로 설정
-          await set(sensorRef, {
+          // 오프라인 상태로 설정 (기존 메타데이터 보존)
+          await update(sensorRef, {
             status: 'offline',
             timestamp: Date.now(),
             [sensorType]: null
@@ -492,8 +492,8 @@ export const SimulationProvider = ({ children }) => {
             const sensorKey = generateSensorKey(sensorType, sensorNum)
             const sensorRef = ref(database, getSensorPath(site.id, sensorKey))
 
-            // 오프라인 상태로 설정
-            await set(sensorRef, {
+            // 오프라인 상태로 설정 (기존 메타데이터 보존)
+            await update(sensorRef, {
               status: 'offline',
               timestamp: Date.now(),
               [sensorType]: null

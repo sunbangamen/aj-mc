@@ -7,7 +7,7 @@ import React from 'react'
 import { useSimulation } from '../contexts/SimulationContext'
 import { formatDateTime } from '../types/sensor.js'
 
-const HardwareStatusPanel = React.memo(({ sensorData, sensorKey }) => {
+const HardwareStatusPanel = React.memo(({ sensorData, sensorKey, siteId }) => {
   const { backfillHardwareMetadata } = useSimulation()
   if (!sensorData) {
     return (
@@ -91,7 +91,6 @@ const HardwareStatusPanel = React.memo(({ sensorData, sensorKey }) => {
           <button
             className="btn btn-sm"
             onClick={async () => {
-              const siteId = (window.location.pathname.match(/\/site\/([^/]+)/) || [])[1]
               if (!siteId) return
               const res = await backfillHardwareMetadata(siteId, sensorKey)
               alert(res.message || '완료')
