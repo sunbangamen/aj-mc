@@ -4782,3 +4782,526 @@ body {
   .measurement-table.compact .measurement-table-grid.density-compact tbody td.distance-cell .distance-value { font-weight: 700; }
   .measurement-table.compact .measurement-table-grid.density-compact tbody td.status-cell { justify-self: end; }
 }
+
+/* HardwareMetadataPanel 깔끔한 관제모니터링 스타일 */
+.hardware-metadata-panel {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* 패널 헤더 */
+.hardware-metadata-panel .panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #3498db;
+}
+
+.hardware-metadata-panel .header-info h2 {
+  margin: 0 0 8px 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.hardware-metadata-panel .header-info p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.hardware-metadata-panel .site-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hardware-metadata-panel .site-filter label {
+  font-weight: 600;
+  color: #495057;
+  white-space: nowrap;
+}
+
+.hardware-metadata-panel .site-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  color: #495057;
+  min-width: 200px;
+  font-size: 0.9rem;
+}
+
+/* 통계 카드 그리드 */
+.hardware-metadata-panel .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.hardware-metadata-panel .stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f1f3f4;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.hardware-metadata-panel .stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.hardware-metadata-panel .stat-card .stat-icon {
+  font-size: 2rem;
+  opacity: 0.8;
+}
+
+.hardware-metadata-panel .stat-card.total .stat-icon { color: #3498db; }
+.hardware-metadata-panel .stat-card.battery .stat-icon { color: #e74c3c; }
+.hardware-metadata-panel .stat-card.signal .stat-icon { color: #f39c12; }
+.hardware-metadata-panel .stat-card.error .stat-icon { color: #e67e22; }
+.hardware-metadata-panel .stat-card.maintenance .stat-icon { color: #9b59b6; }
+
+.hardware-metadata-panel .stat-info {
+  flex: 1;
+}
+
+.hardware-metadata-panel .stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 4px;
+}
+
+.hardware-metadata-panel .stat-label {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* 센서 카드 그리드 */
+.hardware-metadata-panel .sensors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.hardware-metadata-panel .sensor-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f1f3f4;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.hardware-metadata-panel .sensor-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* 센서 헤더 */
+.hardware-metadata-panel .sensor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 20px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.hardware-metadata-panel .sensor-title h3 {
+  margin: 0 0 8px 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.hardware-metadata-panel .sensor-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hardware-metadata-panel .site-name {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.hardware-metadata-panel .location {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  padding: 2px 8px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  align-self: flex-start;
+}
+
+.hardware-metadata-panel .edit-btn {
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.hardware-metadata-panel .edit-btn:hover {
+  background: #2980b9;
+  transform: scale(1.05);
+}
+
+/* 센서 상태 */
+.hardware-metadata-panel .sensor-status {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  flex-wrap: wrap;
+}
+
+.hardware-metadata-panel .status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  flex: 1;
+  min-width: 120px;
+}
+
+.hardware-metadata-panel .status-icon {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+.hardware-metadata-panel .status-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hardware-metadata-panel .status-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hardware-metadata-panel .status-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.hardware-metadata-panel .status-value.good { color: #27ae60; }
+.hardware-metadata-panel .status-value.warning { color: #f39c12; }
+.hardware-metadata-panel .status-value.danger { color: #e74c3c; }
+
+/* 센서 세부 정보 */
+.hardware-metadata-panel .sensor-details {
+  padding: 16px 20px;
+  background: #fafbfc;
+  border-top: 1px solid #e9ecef;
+}
+
+.hardware-metadata-panel .detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.hardware-metadata-panel .detail-item:last-child {
+  border-bottom: none;
+}
+
+.hardware-metadata-panel .detail-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.hardware-metadata-panel .detail-value {
+  font-size: 0.85rem;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+/* 편집 모달 */
+.hardware-metadata-panel .edit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.hardware-metadata-panel .edit-modal {
+  background: white;
+  border-radius: 16px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.hardware-metadata-panel .modal-header {
+  padding: 24px;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+.hardware-metadata-panel .modal-header h3 {
+  margin: 0 0 8px 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.hardware-metadata-panel .sensor-info {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hardware-metadata-panel .sensor-name {
+  font-size: 0.9rem;
+  color: #3498db;
+  font-weight: 600;
+  padding: 4px 8px;
+  background: #e3f2fd;
+  border-radius: 6px;
+}
+
+.hardware-metadata-panel .site-name {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.hardware-metadata-panel .mode-badge {
+  font-size: 0.75rem;
+  color: #10b981;
+  background: #d1fae5;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.hardware-metadata-panel .modal-content {
+  padding: 24px;
+}
+
+.hardware-metadata-panel .form-group {
+  margin-bottom: 20px;
+}
+
+.hardware-metadata-panel .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.hardware-metadata-panel .form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: white;
+  color: #374151;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.hardware-metadata-panel .form-group input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.hardware-metadata-panel .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.hardware-metadata-panel .modal-actions {
+  padding: 16px 24px;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8f9fa;
+}
+
+.hardware-metadata-panel .btn-cancel {
+  padding: 12px 24px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+  white-space: nowrap;
+  min-width: 80px;
+  font-size: 0.95rem;
+}
+
+.hardware-metadata-panel .btn-cancel:hover {
+  background: #5a6268;
+}
+
+.hardware-metadata-panel .btn-save {
+  padding: 12px 24px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+  white-space: nowrap;
+  min-width: 100px;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.hardware-metadata-panel .btn-save:hover {
+  background: #219a52;
+}
+
+/* 데이터 없음 상태 */
+.hardware-metadata-panel .no-data {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+}
+
+.hardware-metadata-panel .no-data-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.hardware-metadata-panel .no-data h3 {
+  margin: 0 0 8px 0;
+  color: #9ca3af;
+  font-size: 1.2rem;
+}
+
+.hardware-metadata-panel .no-data p {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .hardware-metadata-panel {
+    padding: 16px;
+  }
+
+  .hardware-metadata-panel .panel-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .hardware-metadata-panel .site-filter {
+    justify-content: flex-start;
+  }
+
+  .hardware-metadata-panel .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .hardware-metadata-panel .stat-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .hardware-metadata-panel .sensors-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .hardware-metadata-panel .sensor-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .hardware-metadata-panel .edit-btn {
+    align-self: flex-end;
+  }
+
+  .hardware-metadata-panel .sensor-status {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .hardware-metadata-panel .status-item {
+    min-width: auto;
+  }
+
+  .hardware-metadata-panel .form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .hardware-metadata-panel .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .hardware-metadata-panel .btn-cancel,
+  .hardware-metadata-panel .btn-save {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .hardware-metadata-panel .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hardware-metadata-panel .stat-card {
+    flex-direction: row;
+    text-align: left;
+  }
+}

@@ -6,11 +6,13 @@
 import React, { useState, useEffect } from 'react'
 import { useAllSensorData } from '../hooks/useSensorData'
 import { useSites } from '../hooks/useSiteManagement'
+import { useSimulation } from '../contexts/SimulationContext'
 import { extractSensorsFromSiteData, formatDateTime } from '../types/sensor.js'
 
 const HardwareMetadataPanel = () => {
   const { allSites, loading, error } = useAllSensorData()
   const { sites, loading: sitesLoading } = useSites()
+  const { isRunning, updateSensorMetadata } = useSimulation()
   const [selectedSite, setSelectedSite] = useState('')
   const [selectedSensor, setSelectedSensor] = useState('')
   const [editingMetadata, setEditingMetadata] = useState(null)
@@ -66,12 +68,36 @@ const HardwareMetadataPanel = () => {
     setIsEditing(true)
   }
 
-  const handleSaveMetadata = () => {
-    // 실제 구현에서는 Firebase에 저장
-    console.log('메타데이터 저장:', editingMetadata)
-    alert('메타데이터가 저장되었습니다. (시뮬레이션 모드)')
-    setIsEditing(false)
-    setEditingMetadata(null)
+  const handleSaveMetadata = async () => {
+    try {
+      if (updateSensorMetadata) {
+        // 시뮬레이션 모드든 실제 모드든 Firebase에 저장
+        const success = await updateSensorMetadata(
+          editingMetadata.siteId,
+          editingMetadata.sensorKey,
+          editingMetadata.editableData
+        )
+
+        if (success) {
+          const modeText = isRunning ? '(시뮬레이션 모드)' : '(실제 모드)'
+          alert(`✅ 센서 정보가 업데이트되었습니다. ${modeText}`)
+        } else {
+          alert('❌ 업데이트 중 오류가 발생했습니다.')
+          return
+        }
+      } else {
+        // updateSensorMetadata 함수가 없는 경우
+        console.log('메타데이터 저장 (함수 없음):', editingMetadata)
+        alert('❌ 센서 메타데이터 업데이트 기능을 사용할 수 없습니다.')
+        return
+      }
+
+      setIsEditing(false)
+      setEditingMetadata(null)
+    } catch (error) {
+      console.error('메타데이터 저장 오류:', error)
+      alert('❌ 저장 중 오류가 발생했습니다.')
+    }
   }
 
   const handleCancelEdit = () => {
@@ -105,16 +131,19 @@ const HardwareMetadataPanel = () => {
   if (error) return <div className="text-red-600 py-4" style={{ color: '#dc2626' }}>오류: {error}</div>
 
   return (
-    <div className="space-y-6 hardware-metadata-panel">
-      {/* 현장 필터링 */}
-      <div className="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-gray-800">🔧 하드웨어 메타데이터 관리</h3>
-        <div className="flex items-center gap-4">
-          <label className="text-sm font-medium text-gray-600">현장 선택:</label>
+    <div className="hardware-metadata-panel">
+      {/* 헤더 */}
+      <div className="panel-header">
+        <div className="header-info">
+          <h2>🔧 센서 하드웨어 관리</h2>
+          <p>센서 위치 및 하드웨어 정보 관리</p>
+        </div>
+        <div className="site-filter">
+          <label>현장 선택:</label>
           <select
             value={selectedSite}
             onChange={(e) => setSelectedSite(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+            className="site-select"
           >
             <option value="">전체 현장</option>
             {availableSites.map(site => (
@@ -126,251 +155,205 @@ const HardwareMetadataPanel = () => {
         </div>
       </div>
 
-      {/* 하드웨어 상태 요약 */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-blue-600">{hardwareStats.total}</div>
-          <div className="text-sm text-blue-800">총 센서</div>
+      {/* 요약 통계 */}
+      <div className="stats-grid">
+        <div className="stat-card total">
+          <div className="stat-icon">📊</div>
+          <div className="stat-info">
+            <div className="stat-value">{hardwareStats.total}</div>
+            <div className="stat-label">총 센서</div>
+          </div>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-red-600">{hardwareStats.lowBattery}</div>
-          <div className="text-sm text-red-800">배터리 부족</div>
+        <div className="stat-card battery">
+          <div className="stat-icon">🔋</div>
+          <div className="stat-info">
+            <div className="stat-value">{hardwareStats.lowBattery}</div>
+            <div className="stat-label">배터리 부족</div>
+          </div>
         </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-yellow-600">{hardwareStats.weakSignal}</div>
-          <div className="text-sm text-yellow-800">신호 약함</div>
+        <div className="stat-card signal">
+          <div className="stat-icon">📶</div>
+          <div className="stat-info">
+            <div className="stat-value">{hardwareStats.weakSignal}</div>
+            <div className="stat-label">신호 약함</div>
+          </div>
         </div>
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-orange-600">{hardwareStats.withErrors}</div>
-          <div className="text-sm text-orange-800">오류 발생</div>
+        <div className="stat-card error">
+          <div className="stat-icon">⚠️</div>
+          <div className="stat-info">
+            <div className="stat-value">{hardwareStats.withErrors}</div>
+            <div className="stat-label">오류 발생</div>
+          </div>
         </div>
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-purple-600">{hardwareStats.needMaintenance}</div>
-          <div className="text-sm text-purple-800">점검 필요</div>
+        <div className="stat-card maintenance">
+          <div className="stat-icon">🔧</div>
+          <div className="stat-info">
+            <div className="stat-value">{hardwareStats.needMaintenance}</div>
+            <div className="stat-label">점검 필요</div>
+          </div>
         </div>
       </div>
 
       {/* 편집 모달 */}
       {isEditing && editingMetadata && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto" style={{ color: '#000' }}>
-            <h3 className="text-lg font-semibold mb-4">
-              하드웨어 메타데이터 편집 - {editingMetadata.sensorName}
-            </h3>
+        <div className="edit-modal-overlay">
+          <div className="edit-modal">
+            <div className="modal-header">
+              <h3>✏️ 센서 정보 편집</h3>
+              <div className="sensor-info">
+                <span className="sensor-name">{editingMetadata.sensorName}</span>
+                <span className="site-name">{editingMetadata.siteName}</span>
+                {isRunning && <span className="mode-badge">🎮 시뮬레이션 모드</span>}
+              </div>
+            </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  설치 위치
-                </label>
+            <div className="modal-content">
+              <div className="form-group">
+                <label>📍 설치 위치</label>
                 <input
                   type="text"
                   value={editingMetadata.editableData.location}
                   onChange={(e) => updateEditableData('location', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="예: 동쪽벽, 천장, 출입구"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  하드웨어 모델
-                </label>
-                <input
-                  type="text"
-                  value={editingMetadata.editableData.hardwareModel}
-                  onChange={(e) => updateEditableData('hardwareModel', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="예: HC-SR04, DHT22"
-                />
+              <div className="form-row">
+                <div className="form-group">
+                  <label>🔧 하드웨어 모델</label>
+                  <input
+                    type="text"
+                    value={editingMetadata.editableData.hardwareModel}
+                    onChange={(e) => updateEditableData('hardwareModel', e.target.value)}
+                    placeholder="예: HC-SR04, DHT22"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>💿 펌웨어 버전</label>
+                  <input
+                    type="text"
+                    value={editingMetadata.editableData.firmwareVersion}
+                    onChange={(e) => updateEditableData('firmwareVersion', e.target.value)}
+                    placeholder="예: v1.2.3"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  펌웨어 버전
-                </label>
-                <input
-                  type="text"
-                  value={editingMetadata.editableData.firmwareVersion}
-                  onChange={(e) => updateEditableData('firmwareVersion', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="예: v1.2.3"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    설치일
-                  </label>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>📅 설치일</label>
                   <input
                     type="date"
                     value={new Date(editingMetadata.editableData.installDate).toISOString().split('T')[0]}
                     onChange={(e) => updateEditableData('installDate', new Date(e.target.value).getTime())}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    마지막 점검일
-                  </label>
+                <div className="form-group">
+                  <label>🔍 마지막 점검일</label>
                   <input
                     type="date"
                     value={new Date(editingMetadata.editableData.lastMaintenance).toISOString().split('T')[0]}
                     onChange={(e) => updateEditableData('lastMaintenance', new Date(e.target.value).getTime())}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    교정일
-                  </label>
-                  <input
-                    type="date"
-                    value={new Date(editingMetadata.editableData.calibrationDate).toISOString().split('T')[0]}
-                    onChange={(e) => updateEditableData('calibrationDate', new Date(e.target.value).getTime())}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    보증 만료일
-                  </label>
-                  <input
-                    type="date"
-                    value={new Date(editingMetadata.editableData.warrantyExpire).toISOString().split('T')[0]}
-                    onChange={(e) => updateEditableData('warrantyExpire', new Date(e.target.value).getTime())}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={handleCancelEdit}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
-              >
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={handleCancelEdit}>
                 취소
               </button>
-              <button
-                onClick={handleSaveMetadata}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                저장
+              <button className="btn-save" onClick={handleSaveMetadata}>
+                💾 저장
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 센서 목록 */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold">하드웨어 메타데이터 관리</h3>
-          <p className="text-sm text-gray-600 mt-1">
-            센서별 하드웨어 정보를 확인하고 편집할 수 있습니다.
-          </p>
-        </div>
+      {/* 센서 카드 목록 */}
+      <div className="sensors-grid">
+        {filteredSensorsData.map((sensorInfo, index) => (
+          <div key={`${sensorInfo.siteId}-${sensorInfo.sensorKey}`} className="sensor-card">
+            <div className="sensor-header">
+              <div className="sensor-title">
+                <h3>{sensorInfo.sensorName}</h3>
+                <div className="sensor-meta">
+                  <span className="site-name">📍 {sensorInfo.siteName}</span>
+                  <span className="location">{sensorInfo.data.location || '위치 미설정'}</span>
+                </div>
+              </div>
+              <button
+                className="edit-btn"
+                onClick={() => handleEditMetadata(sensorInfo)}
+                title="센서 정보 편집"
+              >
+                ✏️
+              </button>
+            </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  센서 정보
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  하드웨어 상태
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  유지보수
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  작업
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredSensorsData.map((sensorInfo, index) => (
-                <tr key={`${sensorInfo.siteId}-${sensorInfo.sensorKey}`} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {sensorInfo.sensorName}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {sensorInfo.siteName} - {sensorInfo.data.location || '위치 미설정'}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      {sensorInfo.data.hardwareModel || '모델 미설정'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-gray-500">배터리:</span>
-                        <span className={`text-xs font-medium ${
-                          sensorInfo.data.batteryLevel >= 60 ? 'text-green-600' :
-                          sensorInfo.data.batteryLevel >= 30 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {sensorInfo.data.batteryLevel}%
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-gray-500">신호:</span>
-                        <span className={`text-xs font-medium ${
-                          sensorInfo.data.signalStrength >= -40 ? 'text-green-600' :
-                          sensorInfo.data.signalStrength >= -60 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {sensorInfo.data.signalStrength}dBm
-                        </span>
-                      </div>
-                      {sensorInfo.data.errorCount > 0 && (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-500">오류:</span>
-                          <span className="text-xs font-medium text-red-600">
-                            {sensorInfo.data.errorCount}회
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="space-y-1 text-xs text-gray-600">
-                      <div>
-                        <span className="text-gray-500">설치:</span> {formatDateTime(sensorInfo.data.installDate)}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">점검:</span> {formatDateTime(sensorInfo.data.lastMaintenance)}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">교정:</span> {formatDateTime(sensorInfo.data.calibrationDate)}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleEditMetadata(sensorInfo)}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      편집
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            <div className="sensor-status">
+              <div className="status-item">
+                <div className="status-icon">🔋</div>
+                <div className="status-info">
+                  <span className="status-label">배터리</span>
+                  <span className={`status-value ${
+                    sensorInfo.data.batteryLevel >= 60 ? 'good' :
+                    sensorInfo.data.batteryLevel >= 30 ? 'warning' : 'danger'
+                  }`}>
+                    {sensorInfo.data.batteryLevel}%
+                  </span>
+                </div>
+              </div>
 
-        {filteredSensorsData.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            {selectedSite ? '선택한 현장에 센서 데이터가 없습니다.' : '관리할 센서 데이터가 없습니다.'}
+              <div className="status-item">
+                <div className="status-icon">📶</div>
+                <div className="status-info">
+                  <span className="status-label">신호</span>
+                  <span className={`status-value ${
+                    sensorInfo.data.signalStrength >= -40 ? 'good' :
+                    sensorInfo.data.signalStrength >= -60 ? 'warning' : 'danger'
+                  }`}>
+                    {sensorInfo.data.signalStrength >= -40 ? '강함' :
+                     sensorInfo.data.signalStrength >= -60 ? '보통' : '약함'}
+                  </span>
+                </div>
+              </div>
+
+              {sensorInfo.data.errorCount > 0 && (
+                <div className="status-item">
+                  <div className="status-icon">⚠️</div>
+                  <div className="status-info">
+                    <span className="status-label">오류</span>
+                    <span className="status-value danger">
+                      {sensorInfo.data.errorCount}회
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="sensor-details">
+              <div className="detail-item">
+                <span className="detail-label">모델:</span>
+                <span className="detail-value">{sensorInfo.data.hardwareModel || '미설정'}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">마지막 점검:</span>
+                <span className="detail-value">{formatDateTime(sensorInfo.data.lastMaintenance)}</span>
+              </div>
+            </div>
           </div>
-        )}
+        ))}
       </div>
+
+      {filteredSensorsData.length === 0 && (
+        <div className="no-data">
+          <div className="no-data-icon">📊</div>
+          <h3>센서 데이터 없음</h3>
+          <p>{selectedSite ? '선택한 현장에 센서가 없습니다.' : '관리할 센서가 없습니다.'}</p>
+        </div>
+      )}
     </div>
   )
 }

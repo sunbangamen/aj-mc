@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getDatabase } from 'firebase/database'
+import { getDatabase, ref, update } from 'firebase/database'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -27,6 +27,18 @@ export const testFirebaseConnection = () => {
   } catch (error) {
     console.error('Firebase 연결 실패:', error)
     return false
+  }
+}
+
+// 센서 데이터 업데이트 함수 (위치 정보 편집용)
+export const updateSensorData = async (siteId, sensorKey, updateData) => {
+  try {
+    const sensorRef = ref(database, `sensors/${siteId}/${sensorKey}`)
+    await update(sensorRef, updateData)
+    console.log(`✅ 센서 데이터 업데이트 완료: ${siteId}/${sensorKey}`, updateData)
+  } catch (error) {
+    console.error(`❌ 센서 데이터 업데이트 실패: ${siteId}/${sensorKey}`, error)
+    throw error
   }
 }
 

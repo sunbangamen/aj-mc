@@ -1,0 +1,326 @@
+/* 센서 위치 맵 스타일 */
+.sensor-location-map {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 20px 0;
+}
+
+.sensor-location-map-empty {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-style: italic;
+}
+
+/* 맵 헤더 */
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 15px;
+}
+
+.map-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.4rem;
+}
+
+.sensor-count-info {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* 범례 스타일 */
+.sensor-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 15px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-icon {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+}
+
+.legend-icon[data-type="ultrasonic"] {
+  background: #3498db;
+}
+
+.legend-icon[data-type="temperature"] {
+  background: #e74c3c;
+}
+
+.legend-icon[data-type="humidity"] {
+  background: #2ecc71;
+}
+
+.legend-icon[data-type="pressure"] {
+  background: #9b59b6;
+}
+
+.legend-count {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* 상태 범례 */
+.status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.status-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.status-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* 센서 그리드 컨테이너 */
+.sensor-grid-container {
+  margin: 20px 0;
+}
+
+.sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 2px dashed #ddd;
+}
+
+/* 센서 타입별 섹션 */
+.sensor-sections {
+  margin-top: 30px;
+}
+
+.sensor-type-section {
+  margin-bottom: 25px;
+}
+
+.section-title {
+  color: #2c3e50;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #ecf0f1;
+  font-size: 1.1rem;
+}
+
+.sensor-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+/* 센서 타일 기본 스타일 */
+.sensor-tile {
+  background: white;
+  border-radius: 10px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid #e0e0e0;
+  position: relative;
+  overflow: hidden;
+}
+
+.sensor-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.sensor-tile.compact {
+  padding: 12px;
+  min-height: auto;
+}
+
+/* 센서 타일 헤더 */
+.sensor-tile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sensor-icon {
+  font-size: 1.2rem;
+  margin-right: 8px;
+}
+
+.sensor-name {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+.sensor-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 센서 타일 바디 */
+.sensor-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sensor-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.sensor-value .value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--status-color, #333);
+}
+
+.sensor-value .unit {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.sensor-location {
+  font-size: 0.8rem;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sensor-status-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* 알림 상태 표시 */
+.sensor-alert-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 1.2rem;
+  animation: pulse-alert 2s infinite;
+}
+
+.sensor-offline-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 1rem;
+  opacity: 0.7;
+}
+
+/* 상태별 특별 스타일 */
+.sensor-tile.alert {
+  border-left-width: 5px;
+  animation: subtle-pulse 3s infinite;
+}
+
+.sensor-tile.warning {
+  border-left-width: 4px;
+}
+
+.sensor-tile.offline {
+  opacity: 0.8;
+  background: #f8f9fa;
+}
+
+/* 애니메이션 */
+@keyframes pulse-alert {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes subtle-pulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+  50% { box-shadow: 0 4px 16px rgba(231, 76, 60, 0.3); }
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .sensor-location-map {
+    padding: 15px;
+    margin: 15px 0;
+  }
+
+  .map-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .sensor-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .sensor-type-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .sensor-legend, .status-legend {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .sensor-tile {
+    padding: 12px;
+  }
+
+  .sensor-value .value {
+    font-size: 1.2rem;
+  }
+
+  .sensor-name {
+    font-size: 0.9rem;
+  }
+}

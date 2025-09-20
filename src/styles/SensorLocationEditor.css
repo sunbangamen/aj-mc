@@ -1,0 +1,215 @@
+/* 센서 위치 정보 편집 컴포넌트 스타일 */
+
+/* 위치 표시 모드 */
+.location-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(0, 123, 255, 0.05);
+  border: 1px solid rgba(0, 123, 255, 0.2);
+  font-size: 0.85rem;
+}
+
+.location-display:hover {
+  background: rgba(0, 123, 255, 0.1);
+  border-color: rgba(0, 123, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.location-display.compact {
+  padding: 2px 6px;
+  font-size: 0.8rem;
+}
+
+.location-icon {
+  font-size: 0.9em;
+}
+
+.location-text {
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.edit-hint {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-size: 0.8em;
+}
+
+.location-display:hover .edit-hint {
+  opacity: 0.7;
+}
+
+/* 편집 모드 */
+.location-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.location-editor.compact {
+  gap: 4px;
+}
+
+.location-edit-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 2px solid #007bff;
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+.location-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  background: transparent;
+  color: #2c3e50;
+  min-width: 150px;
+}
+
+.location-input::placeholder {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.location-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.location-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-save,
+.btn-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.btn-save {
+  background: #28a745;
+  color: white;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: #218838;
+  transform: scale(1.05);
+}
+
+.btn-save:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-cancel {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #c82333;
+  transform: scale(1.05);
+}
+
+.btn-cancel:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.location-hint {
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 센서 맵에서 사용할 때 */
+.sensor-tile .location-display {
+  width: 100%;
+  justify-content: flex-start;
+  margin-top: 4px;
+}
+
+.sensor-tile .location-editor {
+  margin-top: 4px;
+}
+
+/* 개별 센서 섹션에서 사용할 때 */
+.sensor-section-header .location-display {
+  font-size: 0.9rem;
+  margin-left: 8px;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .location-display {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+  }
+
+  .location-input {
+    font-size: 0.8rem;
+    min-width: 120px;
+  }
+
+  .btn-save,
+  .btn-cancel {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .location-hint {
+    font-size: 0.7rem;
+  }
+}
+
+/* 애니메이션 효과 */
+@keyframes edit-mode-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.location-editor {
+  animation: edit-mode-enter 0.2s ease-out;
+}
+
+/* 로딩 상태 */
+.location-input:disabled + .location-buttons .btn-save {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

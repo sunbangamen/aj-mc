@@ -155,14 +155,15 @@ export const SimulationProvider = ({ children }) => {
 
                 case 'random':
                 default:
-                  // 랜덤 시뮬레이션
-                  sensorData = generateSensorData(sensorType)
+                  // 랜덤 시뮬레이션 (위치 정보 포함)
+                  sensorData = generateSensorData(sensorType, null, sensorNum, true)
                   break
               }
 
-              // 센서별 위치 정보 추가 (시뮬레이션용)
-              sensorData.location = `${sensorType} 센서 ${sensorNum}번`
-              sensorData.deviceId = `SIM_${site.id.slice(-4)}_${sensorType.slice(0, 3).toUpperCase()}_${sensorNum}`
+              // 시뮬레이션용 디바이스 ID 추가
+              if (!sensorData.deviceId) {
+                sensorData.deviceId = `SIM_${site.id.slice(-4)}_${sensorType.slice(0, 3).toUpperCase()}_${sensorNum}`
+              }
 
               await updateSensorData(site.id, sensorType, sensorNum, sensorData)
             }
@@ -628,13 +629,61 @@ export const SimulationProvider = ({ children }) => {
     forceSensorStatus,
     setAllSensorsStatus,
     loadSites,
-    cleanupAllSensorKeys: async () => {
-      const { sites } = simulationConfig
-      console.log('🧹 모든 현장 센서 키 정리 시작')
-      for (const site of sites) {
-        await cleanupLegacySensorKeys(site.id)
+
+    // 센서 메타데이터 업데이트 함수
+    updateSensorMetadata: async (siteId, sensorKey, metadata) => {
+      try {
+        debug('📝 센서 메타데이터 업데이트 시작:', { siteId, sensorKey, metadata })
+
+        const sensorRef = ref(database, `sensors/${siteId}/${sensorKey}`)
+
+        // 현재 센서 데이터 가져오기
+        const snapshot = await get(sensorRef)
+        if (!snapshot.exists()) {
+          logError('❌ 센서 데이터를 찾을 수 없습니다:', { siteId, sensorKey })
+          return false
+        }
+
+        const currentData = snapshot.val()
+
+        // 메타데이터 업데이트 (undefined 값 필터링)
+        const updatedData = { ...currentData }
+
+        // 각 필드를 개별적으로 처리하여 undefined 방지
+        if (metadata.location !== undefined && metadata.location !== '') {
+          updatedData.location = metadata.location
+        }
+        if (metadata.hardwareModel !== undefined && metadata.hardwareModel !== '') {
+          updatedData.hardwareModel = metadata.hardwareModel
+        }
+        if (metadata.firmwareVersion !== undefined && metadata.firmwareVersion !== '') {
+          updatedData.firmwareVersion = metadata.firmwareVersion
+        }
+        if (metadata.installDate !== undefined) {
+          updatedData.installDate = metadata.installDate
+        }
+        if (metadata.lastMaintenance !== undefined) {
+          updatedData.lastMaintenance = metadata.lastMaintenance
+        }
+        if (metadata.calibrationDate !== undefined) {
+          updatedData.calibrationDate = metadata.calibrationDate
+        }
+        if (metadata.warrantyExpire !== undefined) {
+          updatedData.warrantyExpire = metadata.warrantyExpire
+        }
+
+        // 업데이트 시간은 항상 설정
+        updatedData.lastUpdate = Date.now()
+
+        // Firebase에 업데이트
+        await update(sensorRef, updatedData)
+
+        debug('✅ 센서 메타데이터 업데이트 완료:', { siteId, sensorKey })
+        return true
+      } catch (error) {
+        logError('❌ 센서 메타데이터 업데이트 오류:', error)
+        return false
       }
-      console.log('✅ 모든 현장 센서 키 정리 완료')
     },
 
     // 유틸리티
