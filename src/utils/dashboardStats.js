@@ -2,66 +2,52 @@
  * 대시보드 통계 계산 유틸리티
  */
 
+import { extractSensorsFromSiteData } from '../types/sensor'
+
+// 상태 심각도(높을수록 위험)
+const SEVERITY = { offline: 0, normal: 1, warning: 2, alert: 3 }
+
+const getRepresentativeStatus = (siteData) => {
+  const sensors = extractSensorsFromSiteData(siteData)
+  if (!sensors || sensors.length === 0) return { status: 'offline', timestamp: 0 }
+
+  let rep = { status: 'offline', timestamp: 0, severity: SEVERITY.offline }
+  for (const s of sensors) {
+    const status = s.data?.status || 'offline'
+    const ts = s.data?.timestamp || 0
+    const sev = SEVERITY[status] ?? 0
+    if (sev > rep.severity || (sev === rep.severity && ts > rep.timestamp)) {
+      rep = { status, timestamp: ts, severity: sev }
+    }
+  }
+  return rep
+}
+
 /**
- * 전체 현장 통계 계산
- * @param {Array} allSites - 모든 사이트 데이터
+ * 전체 현장 통계 계산(다중 센서 대응)
+ * @param {Array} allSites - 모든 사이트 데이터 ({ siteId, ...siteData })
  * @returns {Object} 통계 객체
  */
 export const calculateSystemStats = (allSites) => {
   if (!allSites || allSites.length === 0) {
-    return {
-      total: 0,
-      normal: 0,
-      warning: 0,
-      alert: 0,
-      offline: 0,
-      connected: 0,
-      lastUpdate: null
-    }
+    return { total: 0, normal: 0, warning: 0, alert: 0, offline: 0, connected: 0, lastUpdate: null }
   }
 
-  const stats = {
-    total: allSites.length,
-    normal: 0,
-    warning: 0,
-    alert: 0,
-    offline: 0,
-    connected: 0,
-    lastUpdate: null
-  }
-
+  const stats = { total: allSites.length, normal: 0, warning: 0, alert: 0, offline: 0, connected: 0, lastUpdate: null }
   let latestTimestamp = 0
 
-  allSites.forEach(({ siteId, ultrasonic }) => {
-    const status = ultrasonic?.status || 'offline'
+  for (const { siteId, ...siteData } of allSites) {
+    const rep = getRepresentativeStatus(siteData)
+    const status = rep.status
 
-    // 상태별 카운트
-    switch (status) {
-      case 'normal':
-        stats.normal++
-        stats.connected++
-        break
-      case 'warning':
-        stats.warning++
-        stats.connected++
-        break
-      case 'alert':
-        stats.alert++
-        stats.connected++
-        break
-      case 'offline':
-      default:
-        stats.offline++
-        break
-    }
+    if (status === 'normal') { stats.normal++; stats.connected++ }
+    else if (status === 'warning') { stats.warning++; stats.connected++ }
+    else if (status === 'alert') { stats.alert++; stats.connected++ }
+    else { stats.offline++ }
 
-    // 최신 업데이트 시간 추적
-    if (ultrasonic?.timestamp && ultrasonic.timestamp > latestTimestamp) {
-      latestTimestamp = ultrasonic.timestamp
-    }
-  })
+    if (rep.timestamp > latestTimestamp) latestTimestamp = rep.timestamp
+  }
 
-  // 최신 업데이트 시간을 포맷팅
   if (latestTimestamp > 0) {
     stats.lastUpdate = new Date(latestTimestamp).toLocaleTimeString()
   }
