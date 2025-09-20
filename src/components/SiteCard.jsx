@@ -1,46 +1,58 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { STATUS_COLORS, STATUS_LABELS, extractSensorsFromSiteData } from '../types/sensor'
 import { SITE_STATUS_LABELS, SITE_STATUS_COLORS } from '../types/site'
+import { useAlertSystem } from '../hooks/useAlertSystem'
 
 const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, siteStatus = 'active' }) {
+  const { loadThresholds, loadSiteThresholds } = useAlertSystem()
+  const [timeouts, setTimeouts] = useState(null)
+
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      try {
+        const data = siteId ? await loadSiteThresholds(siteId) : await loadThresholds(null)
+        if (mounted) setTimeouts(data)
+      } catch {
+        if (mounted) setTimeouts(null)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [siteId])
+
   const { allSensors, statusColor, statusLabel, lastUpdate } = useMemo(() => {
     const sensors = extractSensorsFromSiteData(siteData)
 
-    // 사이트가 활성 상태가 아니면 사이트 상태로 표기
     if (siteStatus !== 'active') {
-      return {
-        allSensors: sensors,
-        statusColor: STATUS_COLORS.offline,
-        statusLabel: siteStatus === 'maintenance' ? '점검중' : '비활성',
-        lastUpdate: '업데이트 없음',
-      }
+      return { allSensors: sensors, statusColor: STATUS_COLORS.offline, statusLabel: siteStatus === 'maintenance' ? '점검중' : '비활성', lastUpdate: '업데이트 없음' }
     }
 
-    // 대표 상태: 여러 센서 중 최악 상태, 동률이면 최신값
     const SEVERITY = { offline: 0, normal: 1, warning: 2, alert: 3 }
     let rep = { status: 'offline', timestamp: 0, severity: 0 }
+    const now = Date.now()
+
     for (const s of sensors) {
       const st = s.data?.status || 'offline'
-      const ts = s.data?.timestamp || 0
-      const sev = SEVERITY[st] ?? 0
+      const ts = s.data?.lastUpdate || s.data?.timestamp || 0
+      const sensorType = (s.key || '').split('_')[0]
+      const timeoutMs = timeouts?.[sensorType]?.offline_timeout || 60000
+      const isFresh = ts && (now - ts) < timeoutMs
+      const effectiveStatus = isFresh ? st : 'offline'
+      const sev = SEVERITY[effectiveStatus] ?? 0
       if (sev > rep.severity || (sev === rep.severity && ts > rep.timestamp)) {
-        rep = { status: st, timestamp: ts, severity: sev }
+        rep = { status: effectiveStatus, timestamp: ts, severity: sev }
       }
     }
-
-    // 데이터 신선도 체크(1분 이내 아니면 오프라인 처리)
-    const now = Date.now()
-    const isFresh = rep.timestamp && (now - rep.timestamp) < 60000
-    const finalStatus = isFresh ? rep.status : 'offline'
 
     return {
       allSensors: sensors,
-      statusColor: STATUS_COLORS[finalStatus],
-      statusLabel: STATUS_LABELS[finalStatus] || finalStatus,
+      statusColor: STATUS_COLORS[rep.status],
+      statusLabel: STATUS_LABELS[rep.status] || rep.status,
       lastUpdate: rep.timestamp ? new Date(rep.timestamp).toLocaleTimeString() : '업데이트 없음',
     }
-  }, [siteData, siteStatus])
+  }, [siteData, siteStatus, timeouts])
 
   return (
     <Link to={`/site/${siteId}`} className="site-card" style={siteStatus !== 'active' ? { opacity: 0.85 } : undefined}>

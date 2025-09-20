@@ -1,13 +1,68 @@
-import React from 'react'
-import {
-  calculateSystemStats,
-  STAT_COLORS,
-  STAT_ICONS,
-  STAT_LABELS
-} from '../utils/dashboardStats'
+import React, { useEffect, useMemo, useState } from 'react'
+import { STAT_COLORS, STAT_ICONS, STAT_LABELS } from '../utils/dashboardStats'
+import { extractSensorsFromSiteData } from '../types/sensor'
+import { useAlertSystem } from '../hooks/useAlertSystem'
 
 function SystemStatsCards({ allSites, connectionStatus }) {
-  const stats = calculateSystemStats(allSites)
+  const { loadThresholds, loadSiteThresholds } = useAlertSystem()
+  const [globalThresholds, setGlobalThresholds] = useState(null)
+  const [siteThresholds, setSiteThresholds] = useState({})
+
+  // Load global thresholds once
+  useEffect(() => {
+    let mounted = true
+    loadThresholds(null).then(t => { if (mounted) setGlobalThresholds(t) }).catch(() => {})
+    return () => { mounted = false }
+  }, [])
+
+  // Prefetch per-site thresholds (cached in hook)
+  useEffect(() => {
+    let mounted = true
+    const siteIds = Array.from(new Set((allSites || []).map(s => s.siteId)))
+    Promise.all(siteIds.map(id => loadSiteThresholds(id).then(t => ({ id, t })).catch(() => ({ id, t: null })))).then(list => {
+      if (!mounted) return
+      const map = {}
+      list.forEach(({ id, t }) => { map[id] = t })
+      setSiteThresholds(map)
+    })
+    return () => { mounted = false }
+  }, [JSON.stringify((allSites || []).map(s => s.siteId))])
+
+  const stats = useMemo(() => {
+    if (!allSites || allSites.length === 0) {
+      return { total: 0, normal: 0, warning: 0, alert: 0, offline: 0, connected: 0, lastUpdate: null }
+    }
+    const SEVERITY = { offline: 0, normal: 1, warning: 2, alert: 3 }
+    const out = { total: allSites.length, normal: 0, warning: 0, alert: 0, offline: 0, connected: 0, lastUpdate: null }
+    let latestTs = 0
+
+    for (const { siteId, ...siteData } of allSites) {
+      const sensors = extractSensorsFromSiteData(siteData)
+      let rep = { status: 'offline', timestamp: 0, severity: 0 }
+      const timeouts = siteThresholds?.[siteId] || globalThresholds
+      const now = Date.now()
+      for (const s of sensors) {
+        const st = s.data?.status || 'offline'
+        const ts = s.data?.lastUpdate || s.data?.timestamp || 0
+        const sensorType = (s.key || '').split('_')[0]
+        const timeoutMs = timeouts?.[sensorType]?.offline_timeout || 60000
+        const isFresh = ts && (now - ts) < timeoutMs
+        const effective = isFresh ? st : 'offline'
+        const sev = SEVERITY[effective] ?? 0
+        if (sev > rep.severity || (sev === rep.severity && ts > rep.timestamp)) {
+          rep = { status: effective, timestamp: ts, severity: sev }
+        }
+      }
+      if (rep.status === 'normal') { out.normal++; out.connected++ }
+      else if (rep.status === 'warning') { out.warning++; out.connected++ }
+      else if (rep.status === 'alert') { out.alert++; out.connected++ }
+      else { out.offline++ }
+      if (rep.timestamp > latestTs) latestTs = rep.timestamp
+    }
+
+    out.lastUpdate = latestTs ? new Date(latestTs).toLocaleTimeString() : null
+    return out
+  }, [allSites, globalThresholds, siteThresholds])
 
   const statItems = [
     { key: 'total', value: stats.total },
