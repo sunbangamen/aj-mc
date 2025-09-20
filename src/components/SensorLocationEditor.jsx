@@ -52,7 +52,7 @@ const SensorLocationEditor = ({
           }
 
           setIsEditing(false)
-          console.log(`✅ 센서 위치 업데이트 완료: ${sensorKey} → ${editValue}`)
+          // debug log suppressed in production
         } else {
           throw new Error('업데이트 실패')
         }

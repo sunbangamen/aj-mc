@@ -509,7 +509,7 @@ export const SimulationProvider = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error('비활성 현장 오프라인 설정 오류:', error)
+      logError('비활성 현장 오프라인 설정 오류:', error)
     }
 
     // 시뮬레이터 초기화
@@ -613,7 +613,7 @@ export const SimulationProvider = ({ children }) => {
 
             // 새로 활성화된 현장들의 센서를 정상 상태로 즉시 설정
             for (const site of newActiveSites) {
-              console.log(`🟢 [시뮬레이션] 새로 활성화된 현장: ${site.name} (${site.id})`)
+              debug(`🟢 [시뮬레이션] 새로 활성화된 현장: ${site.name} (${site.id})`)
               debug(`🟢 새로 활성화된 현장 ${site.name} 센서 초기화`)
 
               const sensorTypes = site.sensorTypes || ['ultrasonic']
@@ -633,12 +633,12 @@ export const SimulationProvider = ({ children }) => {
                   addManagedTimeout(async () => {
                     await forceSensorStatus(site.id, sensorType, sensorNum, 'normal')
                     // UI 강제 새로고침 트리거
-                    console.log(`✅ [시뮬레이션] ${site.name}의 ${sensorType}_${sensorNum} 센서 정상 상태로 설정 완료`)
+                    debug(`✅ [시뮬레이션] ${site.name}의 ${sensorType}_${sensorNum} 센서 정상 상태로 설정 완료`)
                   }, 500)
 
                   // 마지막 수단: 1초 후 페이지 강제 새로고침
                   addManagedTimeout(() => {
-                    console.log(`🔄 [시뮬레이션] ${site.name} 현장 활성화 완료 - UI 새로고침`)
+                    debug(`🔄 [시뮬레이션] ${site.name} 현장 활성화 완료 - UI 새로고침`)
                     window.dispatchEvent(new Event('storage')) // React 상태 업데이트 트리거
                   }, 1000)
                 }

@@ -182,7 +182,7 @@ export const useSensorHistory = (siteId, limit = 20) => {
       return
     }
 
-    console.log(
+    debug(
       `🔥 useSensorHistory 훅 시작: 현장 ${siteId}, 제한 ${limit}개`
     )
 
@@ -190,7 +190,7 @@ export const useSensorHistory = (siteId, limit = 20) => {
     const historyPath = `sensors/${siteId}/history`
     const historyRef = ref(database, historyPath)
 
-    console.log('📍 Firebase 히스토리 참조 경로:', historyPath)
+    debug('📍 Firebase 히스토리 참조 경로:', historyPath)
 
     // limitToLast로 최근 데이터만 가져오기
     const limitedQuery = query(
@@ -204,11 +204,11 @@ export const useSensorHistory = (siteId, limit = 20) => {
       limitedQuery,
       snapshot => {
         try {
-          console.log('📥 Firebase 히스토리 데이터 수신')
+          debug('📥 Firebase 히스토리 데이터 수신')
           setConnectionStatus('connected')
 
           const firebaseData = snapshot.val()
-          console.log('📊 수신된 히스토리 데이터:', firebaseData)
+          debug('📊 수신된 히스토리 데이터:', firebaseData)
 
           if (firebaseData) {
             // 객체를 배열로 변환하고 timestamp로 정렬
@@ -222,12 +222,12 @@ export const useSensorHistory = (siteId, limit = 20) => {
             setHistoryDataThrottled(historyArray)
             setError(null)
           } else {
-            console.log('⚠️ 히스토리 데이터가 없음')
+            debug('⚠️ 히스토리 데이터가 없음')
             setHistoryDataImmediate([])
             setError(null)
           }
         } catch (err) {
-          console.error('❌ 히스토리 데이터 처리 오류:', err)
+          logError('❌ 히스토리 데이터 처리 오류:', err)
           setError(`히스토리 데이터 처리 오류: ${err.message}`)
           setConnectionStatus('error')
         } finally {
@@ -235,7 +235,7 @@ export const useSensorHistory = (siteId, limit = 20) => {
         }
       },
       err => {
-        console.error('❌ Firebase 히스토리 연결 오류:', err)
+        logError('❌ Firebase 히스토리 연결 오류:', err)
         setError(`Firebase 히스토리 연결 오류: ${err.message}`)
         setConnectionStatus('error')
         setLoading(false)
@@ -244,7 +244,7 @@ export const useSensorHistory = (siteId, limit = 20) => {
 
     // 정리 함수
     return () => {
-      console.log('🔥 useSensorHistory 훅 정리')
+      debug('🔥 useSensorHistory 훅 정리')
       unsubscribe()
     }
   }, [siteId, limit])

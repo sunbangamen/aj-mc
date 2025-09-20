@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { useSimulation } from '../contexts/SimulationContext'
+import { debug } from '../utils/log'
 
 function SensorSimulationPanel() {
   const {
@@ -25,7 +26,7 @@ function SensorSimulationPanel() {
 
   // 사이트 목록 변경 감지
   useEffect(() => {
-    console.log('🎮 시뮬레이션 패널: 사이트 목록 변경됨', {
+    debug('🎮 시뮬레이션 패널: 사이트 목록 변경됨', {
       count: simulationConfig.sites.length,
       sites: simulationConfig.sites.map(s => s.name || s.id)
     })

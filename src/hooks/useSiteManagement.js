@@ -10,6 +10,7 @@ import {
   orderByChild
 } from 'firebase/database'
 import { database } from '../services/firebase'
+import { debug, error as logError } from '../utils/log'
 import {
   isValidSiteData,
   generateSiteId,
@@ -27,24 +28,24 @@ export const useSites = () => {
   const [connectionStatus, setConnectionStatus] = useState('connecting')
 
   useEffect(() => {
-    console.log('🔥 useSites 훅 시작')
+    debug('🔥 useSites 훅 시작')
 
     // Firebase 사이트 참조 생성
     const sitesRef = ref(database, 'sites')
     const sitesQuery = query(sitesRef, orderByChild('name'))
 
-    console.log('📍 Firebase 사이트 참조 경로: sites')
+    debug('📍 Firebase 사이트 참조 경로: sites')
 
     // 실시간 리스너 설정
     const unsubscribe = onValue(
       sitesQuery,
       snapshot => {
         try {
-          console.log('📥 Firebase 사이트 데이터 수신')
+          debug('📥 Firebase 사이트 데이터 수신')
           setConnectionStatus('connected')
 
           const firebaseData = snapshot.val()
-          console.log('📊 수신된 사이트 데이터:', firebaseData)
+          debug('📊 수신된 사이트 데이터:', firebaseData)
 
           if (firebaseData) {
             // 객체를 배열로 변환
@@ -58,12 +59,12 @@ export const useSites = () => {
             setSites(sitesArray)
             setError(null)
           } else {
-            console.log('⚠️ 사이트 데이터가 없음')
+            debug('⚠️ 사이트 데이터가 없음')
             setSites([])
             setError(null)
           }
         } catch (err) {
-          console.error('❌ 사이트 데이터 처리 오류:', err)
+          logError('❌ 사이트 데이터 처리 오류:', err)
           setError(`사이트 데이터 처리 오류: ${err.message}`)
           setConnectionStatus('error')
         } finally {
@@ -71,7 +72,7 @@ export const useSites = () => {
         }
       },
       err => {
-        console.error('❌ Firebase 사이트 연결 오류:', err)
+        logError('❌ Firebase 사이트 연결 오류:', err)
         setError(`Firebase 사이트 연결 오류: ${err.message}`)
         setConnectionStatus('error')
         setLoading(false)
@@ -80,7 +81,7 @@ export const useSites = () => {
 
     // 정리 함수
     return () => {
-      console.log('🔥 useSites 훅 정리')
+      debug('🔥 useSites 훅 정리')
       unsubscribe()
     }
   }, [])
@@ -111,34 +112,34 @@ export const useSite = (siteId) => {
       return
     }
 
-    console.log(`🔥 useSite 훅 시작: ${siteId}`)
+    debug(`🔥 useSite 훅 시작: ${siteId}`)
 
     // Firebase 특정 사이트 참조 생성
     const siteRef = ref(database, `sites/${siteId}`)
 
-    console.log('📍 Firebase 사이트 참조 경로:', `sites/${siteId}`)
+    debug('📍 Firebase 사이트 참조 경로:', `sites/${siteId}`)
 
     // 실시간 리스너 설정
     const unsubscribe = onValue(
       siteRef,
       snapshot => {
         try {
-          console.log('📥 Firebase 사이트 데이터 수신')
+          debug('📥 Firebase 사이트 데이터 수신')
           setConnectionStatus('connected')
 
           const firebaseData = snapshot.val()
-          console.log('📊 수신된 사이트 데이터:', firebaseData)
+          debug('📊 수신된 사이트 데이터:', firebaseData)
 
           if (firebaseData && isValidSiteData({ id: siteId, ...firebaseData })) {
             setSite({ id: siteId, ...firebaseData })
             setError(null)
           } else {
-            console.log('⚠️ 사이트 데이터가 없거나 유효하지 않음')
+            debug('⚠️ 사이트 데이터가 없거나 유효하지 않음')
             setSite(null)
             setError('사이트를 찾을 수 없습니다.')
           }
         } catch (err) {
-          console.error('❌ 사이트 데이터 처리 오류:', err)
+          logError('❌ 사이트 데이터 처리 오류:', err)
           setError(`사이트 데이터 처리 오류: ${err.message}`)
           setConnectionStatus('error')
         } finally {
@@ -146,7 +147,7 @@ export const useSite = (siteId) => {
         }
       },
       err => {
-        console.error('❌ Firebase 사이트 연결 오류:', err)
+        logError('❌ Firebase 사이트 연결 오류:', err)
         setError(`Firebase 사이트 연결 오류: ${err.message}`)
         setConnectionStatus('error')
         setLoading(false)
@@ -155,7 +156,7 @@ export const useSite = (siteId) => {
 
     // 정리 함수
     return () => {
-      console.log('🔥 useSite 훅 정리')
+      debug('🔥 useSite 훅 정리')
       unsubscribe()
     }
   }, [siteId])
@@ -193,7 +194,7 @@ export const useSiteManagement = () => {
         updatedAt: now,
       }
 
-      console.log('📝 사이트 생성 시도:', newSite)
+      debug('📝 사이트 생성 시도:', newSite)
 
       // Firebase에 사이트 정보 저장
       const siteRef = ref(database, `sites/${siteId}`)
@@ -287,10 +288,10 @@ export const useSiteManagement = () => {
       // 모든 센서 데이터 생성 완료까지 대기
       await Promise.all(sensorCreationPromises)
 
-      console.log('✅ 사이트 및 센서 데이터 생성 완료:', siteId)
+      debug('✅ 사이트 및 센서 데이터 생성 완료:', siteId)
       return { success: true, siteId, site: newSite }
     } catch (err) {
-      console.error('❌ 사이트 생성 오류:', err)
+      logError('❌ 사이트 생성 오류:', err)
       setError(`사이트 생성 실패: ${err.message}`)
       return { success: false, error: err.message }
     } finally {
@@ -310,16 +311,16 @@ export const useSiteManagement = () => {
         updatedAt: now,
       }
 
-      console.log('📝 사이트 수정 시도:', siteId, updateData)
+      debug('📝 사이트 수정 시도:', siteId, updateData)
 
       // Firebase에서 업데이트
       const siteRef = ref(database, `sites/${siteId}`)
       await update(siteRef, updateData)
 
-      console.log('✅ 사이트 수정 완료:', siteId)
+      debug('✅ 사이트 수정 완료:', siteId)
       return { success: true, siteId }
     } catch (err) {
-      console.error('❌ 사이트 수정 오류:', err)
+      logError('❌ 사이트 수정 오류:', err)
       setError(`사이트 수정 실패: ${err.message}`)
       return { success: false, error: err.message }
     } finally {
@@ -333,7 +334,7 @@ export const useSiteManagement = () => {
     setError(null)
 
     try {
-      console.log('🗑️ 사이트 삭제 시도:', siteId)
+      debug('🗑️ 사이트 삭제 시도:', siteId)
 
       // Firebase에서 사이트 정보 삭제
       const siteRef = ref(database, `sites/${siteId}`)
@@ -343,10 +344,10 @@ export const useSiteManagement = () => {
       const sensorRef = ref(database, `sensors/${siteId}`)
       await remove(sensorRef)
 
-      console.log('✅ 사이트 및 센서 데이터 삭제 완료:', siteId)
+      debug('✅ 사이트 및 센서 데이터 삭제 완료:', siteId)
       return { success: true, siteId }
     } catch (err) {
-      console.error('❌ 사이트 삭제 오류:', err)
+      logError('❌ 사이트 삭제 오류:', err)
       setError(`사이트 삭제 실패: ${err.message}`)
       return { success: false, error: err.message }
     } finally {

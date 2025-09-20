@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useAlertSystem } from '../hooks/useAlertSystem'
+import { debug } from '../utils/log'
 
 /**
  * 개발용 알림 히스토리 관리 컴포넌트
@@ -23,7 +24,7 @@ function DevAlertHistoryManager() {
   const refreshStatus = () => {
     const status = getSystemStatus()
     setSystemStatus(status)
-    console.log('📊 시스템 상태:', status)
+    debug('📊 시스템 상태:', status)
   }
 
   // 모든 히스토리 삭제
