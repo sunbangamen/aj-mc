@@ -60,6 +60,25 @@ const HardwareMetadataPanel = () => {
       name: siteMap[siteId] ? siteMap[siteId].name : siteId
     }))
 
+  // 선택된 현장에 존재하는 센서 타입 계산(전역이면 전체 타입)
+  const activeTimeoutTypes = React.useMemo(() => {
+    if (!selectedSite) return ['ultrasonic', 'temperature', 'humidity', 'pressure']
+    const cfg = siteMap[selectedSite]?.sensorConfig
+    if (cfg && typeof cfg === 'object') {
+      const types = Object.entries(cfg)
+        .filter(([, count]) => (parseInt(count, 10) || 0) > 0)
+        .map(([t]) => t)
+      if (types.length) return types
+    }
+    // fallback: 실제 데이터에서 감지
+    const typesSet = new Set()
+    filteredSensorsData.forEach(s => {
+      const t = (s.sensorKey || '').split('_')[0]
+      if (t) typesSet.add(t)
+    })
+    return typesSet.size > 0 ? Array.from(typesSet) : ['ultrasonic', 'temperature', 'humidity', 'pressure']
+  }, [selectedSite, JSON.stringify(siteMap[selectedSite] || {}), JSON.stringify(filteredSensorsData.map(s => s.sensorKey))])
+
   const handleEditMetadata = (sensorInfo) => {
     setEditingMetadata({
       ...sensorInfo,
@@ -222,50 +241,25 @@ const HardwareMetadataPanel = () => {
         ) : timeoutError ? (
           <div className="error" style={{ color: '#dc2626' }}>오류: {timeoutError}</div>
         ) : (
-          {(() => {
-            // 선택된 현장에 존재하는 센서 타입만 표시(전역은 전체 표시)
-            let activeTypes = ['ultrasonic', 'temperature', 'humidity', 'pressure']
-            if (selectedSite) {
-              const cfg = siteMap[selectedSite]?.sensorConfig
-              if (cfg && typeof cfg === 'object') {
-                activeTypes = Object.entries(cfg)
-                  .filter(([, count]) => (parseInt(count, 10) || 0) > 0)
-                  .map(([t]) => t)
-              } else {
-                // 센서 데이터에서 추출 (fallback)
-                const typesSet = new Set()
-                filteredSensorsData.forEach(s => {
-                  const t = (s.sensorKey || '').split('_')[0]
-                  if (t) typesSet.add(t)
-                })
-                if (typesSet.size > 0) activeTypes = Array.from(typesSet)
-              }
-              // 그래도 비어있으면 모든 타입 노출(안내 목적)
-              if (!activeTypes.length) activeTypes = ['ultrasonic', 'temperature', 'humidity', 'pressure']
-            }
-
-            return (
-              <div className="timeout-grid">
-                {activeTypes.map(type => (
-                  <div key={type} className="timeout-item">
-                    <label className="timeout-label">
-                      {type === 'ultrasonic' ? '초음파' : type === 'temperature' ? '온도' : type === 'humidity' ? '습도' : '압력'}
-                    </label>
-                    <div className="timeout-input">
-                      <input
-                        type="number"
-                        min={10}
-                        max={3600}
-                        value={Math.floor((timeoutConfig?.[type]?.offline_timeout || DEFAULT_THRESHOLDS?.[type]?.offline_timeout || 60000) / 1000)}
-                        onChange={(e) => handleTimeoutChange(type, e.target.value)}
-                      />
-                      <span className="unit">초</span>
-                    </div>
-                  </div>
-                ))}
+          <div className="timeout-grid">
+            {activeTimeoutTypes.map(type => (
+              <div key={type} className="timeout-item">
+                <label className="timeout-label">
+                  {type === 'ultrasonic' ? '초음파' : type === 'temperature' ? '온도' : type === 'humidity' ? '습도' : '압력'}
+                </label>
+                <div className="timeout-input">
+                  <input
+                    type="number"
+                    min={10}
+                    max={3600}
+                    value={Math.floor((timeoutConfig?.[type]?.offline_timeout || DEFAULT_THRESHOLDS?.[type]?.offline_timeout || 60000) / 1000)}
+                    onChange={(e) => handleTimeoutChange(type, e.target.value)}
+                  />
+                  <span className="unit">초</span>
+                </div>
               </div>
-            )
-          })()}
+            ))}
+          </div>
         )}
         <div className="timeout-actions">
           <button className="btn btn-secondary" onClick={resetTimeoutsToDefault}>🔄 기본값</button>
