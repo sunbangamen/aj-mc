@@ -5,7 +5,7 @@ import { useSimulation } from '../contexts/SimulationContext'
 
 function Layout() {
   const { sites, loading } = useSites()
-  const { isRunning } = useSimulation()
+  const { isRunning, watchdog } = useSimulation()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const navigate = useNavigate()
 
@@ -95,6 +95,22 @@ function Layout() {
           </ul>
         </div>
       </nav>
+      {/* 시뮬레이션 워치독 경고 배너 */}
+      {isRunning && watchdog?.status === 'delayed' && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            background: '#FEF2F2',
+            color: '#991B1B',
+            border: '1px solid #FCA5A5',
+            padding: '8px 12px',
+            fontWeight: 600
+          }}
+        >
+          ⚠️ 시뮬레이션 지연이 감지되었습니다. 연결/속도를 확인하세요.
+        </div>
+      )}
       <main className="main-content">
         <Outlet />
       </main>

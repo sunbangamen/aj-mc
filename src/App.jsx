@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
+import ErrorBoundary from './components/ErrorBoundary'
 import Dashboard from './pages/Dashboard'
 import SiteMonitor from './pages/SiteMonitor'
 import TestPanel from './pages/TestPanel'
@@ -19,18 +20,20 @@ function App() {
 
   return (
     <SimulationProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="site/:siteId" element={<SiteMonitor />} />
-            <Route path="test" element={<TestPanel />} />
-            <Route path="admin" element={<AdminPanel />} />
-            <Route path="admin-dashboard" element={<AdminDashboard />} />
-            <Route path="simulation" element={<SimulationPanel />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="site/:siteId" element={<SiteMonitor />} />
+              <Route path="test" element={<TestPanel />} />
+              <Route path="admin" element={<AdminPanel />} />
+              <Route path="admin-dashboard" element={<AdminDashboard />} />
+              <Route path="simulation" element={<SimulationPanel />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </ErrorBoundary>
     </SimulationProvider>
   )
 }
