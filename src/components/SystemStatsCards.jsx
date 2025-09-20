@@ -153,7 +153,7 @@ function SystemStatsCards({ allSites, connectionStatus }) {
               return (
                 <Link
                   key={item.siteId}
-                  to={`/site/${item.siteId}${item.causeKey ? `#sensor-section-${item.causeKey}` : ''}`}
+                  to={`/site/${item.siteId}`}
                   className="issue-row"
                   style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'inherit' }}
                 >
