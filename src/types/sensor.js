@@ -191,7 +191,13 @@ export const getStatusStyle = status => ({
 export const isValidSensorData = data => {
   return (
     data &&
-    ((typeof data.distance === 'number') || (typeof data.value === 'number')) &&
+    (
+      typeof data.distance === 'number' ||
+      typeof data.value === 'number' ||
+      typeof data.temperature === 'number' ||
+      typeof data.humidity === 'number' ||
+      typeof data.pressure === 'number'
+    ) &&
     typeof data.timestamp === 'number' &&
     typeof data.status === 'string' &&
     Object.keys(STATUS_LABELS).includes(data.status)
@@ -296,7 +302,8 @@ export const extractSensorsFromSiteData = (siteData) => {
     const formattedValue = formatSensorValue(rawValue)
 
     const sensor = {
-      key: sensorKey,
+      key: sensorKey, // 원본 Firebase 키 사용 (ultrasonic_01 유지)
+      normalizedKey: normalizedKey, // 정규화된 키도 보관 (표시용)
       type: sensorType,
       number: normalizedNumber,
       displayName: `${getSensorDisplayName(sensorType)} ${normalizedNumber}`,
@@ -314,19 +321,24 @@ export const extractSensorsFromSiteData = (siteData) => {
   debug('🔍 최종 추출된 센서 수:', sensors.length)
   debug('🔍 최종 센서 키들:', sensors.map(s => s.key))
 
-  return sensors.sort((a, b) => a.key.localeCompare(b.key))
+  return sensors.sort((a, b) => a.normalizedKey.localeCompare(b.normalizedKey))
 }
 
-// 하위 호환성: 기존 ultrasonic 키를 찾는 함수
+// 하위 호환성: 주요 센서 데이터를 찾는 함수 (모든 센서 타입 지원)
 export const getLegacySensorData = (siteData) => {
   if (!siteData) return null
 
-  // 새 구조 우선 사용(패딩/비패딩 모두 지원)
-  if (siteData.ultrasonic_01) return siteData.ultrasonic_01
-  if (siteData.ultrasonic_1) return siteData.ultrasonic_1
+  // 우선순위: 초음파 → 온도 → 습도 → 압력
+  const sensorPriority = ['ultrasonic', 'temperature', 'humidity', 'pressure']
 
-  // 기존 구조 (ultrasonic) 마지막에 사용
-  if (siteData.ultrasonic) return siteData.ultrasonic
+  for (const sensorType of sensorPriority) {
+    // 새 구조 우선 사용(패딩/비패딩 모두 지원)
+    if (siteData[`${sensorType}_01`]) return siteData[`${sensorType}_01`]
+    if (siteData[`${sensorType}_1`]) return siteData[`${sensorType}_1`]
+
+    // 기존 구조 (단일 키) 마지막에 사용
+    if (siteData[sensorType]) return siteData[sensorType]
+  }
 
   return null
 }

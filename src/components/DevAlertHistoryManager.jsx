@@ -9,6 +9,7 @@ function DevAlertHistoryManager() {
   const {
     deleteAllHistory,
     deleteAllActiveAlerts,
+    resetAllSystemData,
     clearCache,
     manualCleanup,
     getSystemStatus
@@ -97,6 +98,53 @@ function DevAlertHistoryManager() {
     }
   }
 
+  // 전체 시스템 초기화
+  const handleResetAllSystem = async () => {
+    const confirmed = window.confirm(
+      '🔥 전체 시스템 초기화 🔥\n\n' +
+      '이 작업은 다음 모든 데이터를 영구적으로 삭제합니다:\n' +
+      '• 모든 현장 정보\n' +
+      '• 모든 센서 데이터\n' +
+      '• 모든 경고 및 알림\n' +
+      '• 모든 임계값 설정\n\n' +
+      '⚠️ 이 작업은 되돌릴 수 없습니다!\n' +
+      '개발 환경에서만 사용하세요.\n\n' +
+      '정말로 전체 시스템을 초기화하시겠습니까?'
+    )
+
+    if (!confirmed) return
+
+    const doubleConfirmed = window.confirm(
+      '⚠️ 마지막 확인 ⚠️\n\n' +
+      '정말로 모든 데이터를 삭제하고\n' +
+      '시스템을 완전히 초기화하시겠습니까?\n\n' +
+      '"예"를 누르면 즉시 실행됩니다!'
+    )
+
+    if (!doubleConfirmed) return
+
+    setIsLoading(true)
+    try {
+      const result = await resetAllSystemData()
+      setLastResult(result)
+
+      if (result.success) {
+        alert(`🔥 전체 시스템 초기화 완료!\n\n삭제된 데이터:\n${result.deletedData.join(', ')}\n\n시스템이 완전히 초기화되었습니다.`)
+        refreshStatus()
+        // 페이지 새로고침하여 모든 상태 초기화
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
+      } else {
+        alert(`❌ 초기화 실패: ${result.error}`)
+      }
+    } catch (error) {
+      alert(`❌ 오류 발생: ${error.message}`)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="dev-alert-manager">
       <div className="panel-header">
@@ -177,9 +225,24 @@ function DevAlertHistoryManager() {
             >
               {isLoading ? '삭제 중...' : '모든 활성 알림 삭제'}
             </button>
+            <button
+              onClick={handleResetAllSystem}
+              className="btn btn-danger system-reset"
+              disabled={isLoading}
+              style={{
+                background: 'linear-gradient(45deg, #dc2626, #b91c1c)',
+                fontWeight: 'bold',
+                border: '2px solid #991b1b'
+              }}
+            >
+              {isLoading ? '초기화 중...' : '🔥 전체 시스템 초기화'}
+            </button>
           </div>
           <p className="action-description danger-text">
             ⚠️ 모든 데이터가 영구적으로 삭제됩니다. 개발용으로만 사용하세요!
+          </p>
+          <p className="action-description danger-text" style={{ marginTop: '8px', color: '#dc2626', fontWeight: 'bold' }}>
+            🔥 전체 시스템 초기화는 모든 현장, 센서, 경고, 설정을 삭제합니다!
           </p>
         </div>
       </div>

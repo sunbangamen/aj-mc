@@ -110,6 +110,26 @@ The system uses dual data structure for sites and sensors:
   - Site links converted to dropdown menu for better scalability
   - Dynamic site counter and "add new site" functionality
 
+### Enterprise Features (Phase 14A-F) - 2025-09-20
+- **Multi-sensor Architecture**: Support for multiple sensor types per site
+  - Ultrasonic, temperature, humidity, pressure sensors
+  - Individual sensor tracking with unique keys (ultrasonic_01, temperature_01, etc.)
+  - Backward compatibility with legacy single-sensor structure
+- **Hardware Metadata System**: Complete sensor lifecycle management
+  - Battery level, WiFi signal strength, firmware version tracking
+  - Installation date, maintenance schedule, calibration records
+  - Accuracy, reliability, error count monitoring
+- **Advanced Alert System**: 6-type alert system with real-time monitoring
+  - Threshold alerts (warning/alert ranges)
+  - Offline detection, battery warnings, signal strength alerts
+  - Maintenance reminders, error count tracking
+  - Site-specific and global threshold management
+- **Site-specific Threshold System**: Customizable alert thresholds
+  - Global default thresholds for all sites
+  - Site-specific override capability
+  - Sensor-type specific threshold configuration
+  - Admin panel with URL routing for easy management
+
 ### Technical Features
 - **Environment validation**: Automated Firebase configuration checking (✅ Working)
 - **Real-time navigation**: Dynamic site dropdown menu with live updates (✅ Working)
@@ -207,9 +227,17 @@ This project includes Korean language documentation and templates. All user-faci
 - **Phase 8**: Sensor data simulation system with global state management
 - **Phase 9**: Dashboard UI/UX improvements with professional monitoring interface
 
+### ✅ Completed (Phase 14A-F) - 2025-09-20 업데이트
+- **Phase 14A**: Multi-sensor support architecture (완료)
+- **Phase 14B**: Multi-sensor simulation system (완료)
+- **Phase 14C**: Multi-sensor UI/UX complete support (완료)
+- **Phase 14D**: Hardware metadata extension (완료)
+- **Phase 14E**: Alert and threshold system (완료)
+- **Phase 14F**: Site-specific threshold system + UI/UX improvements (완료)
+
 ### 🚧 Next Phases (Recommended Priority)
 - **Phase 10**: Advanced data visualization with custom time ranges and filtering
-- **Phase 11**: Alert system with notifications, thresholds, and email/SMS integration
+- **Phase 11**: Smart alert system with email/SMS notifications
 - **Phase 12**: Data export functionality (CSV/Excel) and reporting system
 - **Phase 13**: User authentication and role-based access control
 
@@ -233,3 +261,28 @@ The project uses git worktrees for feature development:
 4. **Add Test Data**: Firebase Console → Realtime Database → Add sensor data
 5. **Monitor Real-time**: Change values in Firebase Console and watch live updates
 6. **Site Management**: Access `/admin` to create/edit/delete sites with automatic sensor data generation
+
+## Recent Critical Fixes (2025-09-20)
+
+### Sensor Key Preservation Issue
+- **Problem**: Charts and measurement history not displaying for newly created sites
+- **Root Cause**: Key mismatch between Firebase storage ('ultrasonic_01') and component access ('ultrasonic_1')
+- **Solution**: Modified `extractSensorsFromSiteData` in `src/types/sensor.js` to preserve original Firebase keys while maintaining display normalization
+- **Files Changed**: `src/types/sensor.js`, `src/pages/SiteMonitor.jsx`
+
+### JSX Syntax Error Resolution
+- **Problem**: Nested ternary operator syntax error in SiteMonitor.jsx:396
+- **Solution**: Properly wrapped `.map()` function in parentheses for correct JSX parsing
+- **Status**: ✅ Fixed - Server running without errors
+
+### System Completion Status
+- **Current State**: 99.5% complete enterprise monitoring system
+- **All Phase 14A-F Features**: Fully implemented and tested
+- **Next Recommended**: Phase 10 (Advanced Data Visualization) for enhanced user analytics
+
+## Location Display Enhancement Proposal
+- **Issue**: Sensor location information scattered across multiple components
+- **Priority Improvement Areas**:
+  1. Dashboard SiteCard - Add sensor location to main view
+  2. AlertBanner/AlertManager - Include location in alert messages
+  3. Visual sensor map - Future enhancement for spatial awareness

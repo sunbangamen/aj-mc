@@ -483,6 +483,48 @@ export const useAlertSystem = () => {
     }
   }
 
+  // 개발용: 전체 시스템 초기화 (모든 데이터 삭제)
+  const resetAllSystemData = async () => {
+    try {
+      debug('🔥 전체 시스템 초기화 시작')
+
+      // 1. 모든 사이트 삭제
+      const sitesRef = ref(database, 'sites')
+      await set(sitesRef, null)
+      debug('✅ 모든 사이트 데이터 삭제 완료')
+
+      // 2. 모든 센서 데이터 삭제
+      const sensorsRef = ref(database, 'sensors')
+      await set(sensorsRef, null)
+      debug('✅ 모든 센서 데이터 삭제 완료')
+
+      // 3. 모든 경고 삭제
+      const alertsRef = ref(database, 'alerts')
+      await set(alertsRef, null)
+      debug('✅ 모든 경고 데이터 삭제 완료')
+
+      // 4. 모든 설정 삭제
+      const settingsRef = ref(database, 'settings')
+      await set(settingsRef, null)
+      debug('✅ 모든 설정 데이터 삭제 완료')
+
+      // 5. 로컬 상태 초기화
+      setAlerts([])
+      alertsRef.current = []
+      setThresholds({})
+
+      debug('🔥 전체 시스템 초기화 완료')
+      return {
+        success: true,
+        message: '전체 시스템이 초기화되었습니다.',
+        deletedData: ['sites', 'sensors', 'alerts', 'settings']
+      }
+    } catch (error) {
+      logError('❌ 시스템 초기화 오류:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
   // 개발용: 캐시 즉시 초기화
   const clearCache = () => {
     const result = cleanupMemoryCache()
@@ -533,6 +575,7 @@ export const useAlertSystem = () => {
     // 개발용 즉시 삭제 도구
     deleteAllHistory,
     deleteAllActiveAlerts,
+    resetAllSystemData,
     clearCache,
 
     // 유틸리티

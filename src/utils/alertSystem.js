@@ -187,7 +187,10 @@ export const generateAlerts = (sensorData, sensorType, siteId, sensorKey, thresh
       siteId,
       sensorKey,
       '센서가 오프라인 상태입니다',
-      { lastSeen: sensorData.lastUpdate, timeout: currentThresholds.offline_timeout }
+      {
+        lastSeen: sensorData.lastUpdate || sensorData.timestamp || timestamp || Date.now(),
+        timeout: currentThresholds.offline_timeout
+      }
     )
     alerts.push(offlineAlert)
 
@@ -318,6 +321,22 @@ const generateUniqueId = () => {
  */
 const createAlert = (alertType, siteId, sensorKey, message, data = {}) => {
   const uniqueId = generateUniqueId()
+
+  // undefined 값 필터링 함수
+  const cleanData = (obj) => {
+    const cleaned = {}
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined && value !== null) {
+        if (typeof value === 'object' && value !== null) {
+          cleaned[key] = cleanData(value)
+        } else {
+          cleaned[key] = value
+        }
+      }
+    }
+    return cleaned
+  }
+
   return {
     id: `${siteId}_${sensorKey}_${alertType.level}_${uniqueId}`,
     type: alertType.level,
@@ -328,7 +347,7 @@ const createAlert = (alertType, siteId, sensorKey, message, data = {}) => {
     timestamp: Date.now(),
     acknowledged: false,
     ...alertType,
-    data
+    data: cleanData(data)
   }
 }
 

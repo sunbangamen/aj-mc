@@ -16,7 +16,7 @@ const MeasurementTable = React.memo(function MeasurementTable({ siteId, sensorKe
   const [historyData, setHistoryDataThrottled, setHistoryDataImmediate] = useThrottledState([], 150)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [collapsed, setCollapsed] = useState(true)
+  const [visibleCount, setVisibleCount] = useState(5)
 
   useEffect(() => {
     if (!siteId || !sensorKey) return
@@ -72,6 +72,18 @@ const MeasurementTable = React.memo(function MeasurementTable({ siteId, sensorKe
     }
   }, [siteId, sensorKey, limit])
 
+  // 유효한 데이터 산출은 항상 훅들 위에서 실행되도록 유지
+  const validHistoryData = historyData.filter(isValidSensorData)
+  // 표시 개수 관리 (5개씩 더보기) - 훅은 반환문 이전에 항상 호출
+  useEffect(() => {
+    const base = Math.min(5, validHistoryData.length)
+    setVisibleCount(prev => {
+      if (prev > validHistoryData.length) return base
+      if (prev < 5) return base
+      return prev
+    })
+  }, [validHistoryData.length])
+
   if (loading) {
     return (
       <div className="measurement-table">
@@ -111,11 +123,9 @@ const MeasurementTable = React.memo(function MeasurementTable({ siteId, sensorKe
       </div>
     )
   }
-
-  // 유효한 데이터만 필터링
-  const validHistoryData = historyData.filter(isValidSensorData)
-  const previewCount = Math.min(5, limit)
-  const displayed = collapsed ? validHistoryData.slice(0, previewCount) : validHistoryData
+  
+  // 표시할 데이터 산출
+  const displayed = validHistoryData.slice(0, visibleCount)
 
   return (
     <div className="measurement-table compact">
@@ -126,9 +136,14 @@ const MeasurementTable = React.memo(function MeasurementTable({ siteId, sensorKe
           <span className={`connection-status ${connectionStatus}`}>
             {connectionStatus === 'connected' ? '🟢 실시간' : '🔴 연결 안됨'}
           </span>
-          {validHistoryData.length > previewCount && (
-            <button className="btn btn-sm" onClick={() => setCollapsed(v => !v)} style={{ marginLeft: 8 }}>
-              {collapsed ? '펼치기' : '접기'}
+          {visibleCount < validHistoryData.length && (
+            <button className="btn btn-sm" onClick={() => setVisibleCount(v => Math.min(v + 5, validHistoryData.length))} style={{ marginLeft: 8 }}>
+              더보기 +5
+            </button>
+          )}
+          {visibleCount > 5 && (
+            <button className="btn btn-sm" onClick={() => setVisibleCount(Math.min(5, validHistoryData.length))} style={{ marginLeft: 4 }}>
+              접기
             </button>
           )}
         </div>

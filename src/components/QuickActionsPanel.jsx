@@ -8,7 +8,9 @@ function QuickActionsPanel({ onRefresh }) {
     isRunning,
     startSimulation,
     stopSimulation,
-    simulationConfig
+    simulationConfig,
+    updateConfig,
+    availableModes
   } = useSimulation()
 
   const handleSimulationToggle = async () => {
@@ -36,6 +38,11 @@ function QuickActionsPanel({ onRefresh }) {
         button.style.transform = 'rotate(0deg)'
       }, 600)
     }
+  }
+
+  const handleModeChange = (e) => {
+    const mode = e.target.value
+    updateConfig({ mode })
   }
 
   const actions = [
@@ -87,6 +94,14 @@ function QuickActionsPanel({ onRefresh }) {
       <div className="actions-header">
         <h3>🚀 빠른 작업</h3>
         <p>자주 사용하는 기능들에 빠르게 접근할 수 있습니다.</p>
+        <div className="sim-mode-control" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <label style={{ fontSize: 12, color: '#6b7280' }}>시뮬레이션 모드</label>
+          <select value={simulationConfig.mode} onChange={handleModeChange} style={{ fontSize: 12, padding: '4px 6px' }}>
+            {availableModes?.map(m => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="actions-grid">

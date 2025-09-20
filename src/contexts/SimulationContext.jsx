@@ -22,7 +22,7 @@ export const SimulationProvider = ({ children }) => {
   const [isRunning, setIsRunning] = useState(false)
   const [simulationConfig, setSimulationConfig] = useState({
     interval: 3000, // 3초마다 업데이트 (요청 반영)
-    mode: 'random', // 'random', 'scenario', 'gradual'
+    mode: 'gradual', // 기본을 점진적 모드로 변경
     sites: [], // 시뮬레이션할 사이트 목록
   })
   const [simulationStats, setSimulationStats] = useState({
@@ -68,8 +68,8 @@ export const SimulationProvider = ({ children }) => {
    */
   const updateSensorData = async (siteId, sensorType, sensorNumber, data) => {
     try {
-      // 센서 키 생성 - 새로운 형식에 맞게 수정 (예: ultrasonic_1, temperature_1)
-      const sensorKey = sensorNumber ? `${sensorType}_${sensorNumber}` : sensorType
+      // 센서 키 생성 - 일관된 패딩 형식 사용 (예: ultrasonic_01, temperature_01)
+      const sensorKey = sensorNumber ? `${sensorType}_${sensorNumber.toString().padStart(2, '0')}` : sensorType
 
       // 현재 센서 데이터 업데이트
       const sensorRef = ref(database, `sensors/${siteId}/${sensorKey}`)
@@ -144,6 +144,14 @@ export const SimulationProvider = ({ children }) => {
                   const gradualSimulator = simulatorsRef.current[`${simulatorKey}_gradual`]
                   sensorData = gradualSimulator()
                   break
+                case 'gentle':
+                  // 아주 미미한 변화 (±1 단위)
+                  if (!simulatorsRef.current[`${simulatorKey}_gradual`]) {
+                    simulatorsRef.current[`${simulatorKey}_gradual`] = createGradualChangeSimulator(sensorType)
+                  }
+                  const gentleSimulator = simulatorsRef.current[`${simulatorKey}_gradual`]
+                  sensorData = gentleSimulator(1)
+                  break
 
                 case 'random':
                 default:
@@ -161,36 +169,45 @@ export const SimulationProvider = ({ children }) => {
           }
         }
       } else {
-        // 구형식 지원 (하위 호환성)
-        const sensorTypes = site.sensorTypes || ['ultrasonic']
-        const totalSensorCount = site.sensorCount || 1
+        // 구형식: sensorConfig가 없으면 실제 DB 센서 키를 사용하여 업데이트 시도
+        const sensorsRef = ref(database, `sensors/${site.id}`)
+        const sensorsSnap = await get(sensorsRef)
 
-        const sensorsPerType = sensorTypes.length === 1
-          ? totalSensorCount
-          : Math.max(1, Math.floor(totalSensorCount / sensorTypes.length))
+        if (sensorsSnap.exists()) {
+          const sensors = sensorsSnap.val() || {}
+          const keys = Object.keys(sensors).filter(k => k !== 'history')
 
-        for (const sensorType of sensorTypes) {
-          for (let sensorNum = 1; sensorNum <= sensorsPerType; sensorNum++) {
+          for (const key of keys) {
+            const [sensorType, numPart] = key.split('_')
+            const sensorNum = parseInt(numPart, 10) || 1
             const simulatorKey = `${site.id}_${sensorType}_${sensorNum}`
-            let sensorData
 
+            let sensorData
             switch (mode) {
-              case 'scenario':
+              case 'scenario': {
                 if (!simulatorsRef.current[`${simulatorKey}_scenario`]) {
                   simulatorsRef.current[`${simulatorKey}_scenario`] = createStatusScenario()
                 }
                 const scenarioStatus = simulatorsRef.current[`${simulatorKey}_scenario`]()
                 sensorData = generateSensorData(sensorType, scenarioStatus)
                 break
-
-              case 'gradual':
+              }
+              case 'gradual': {
                 if (!simulatorsRef.current[`${simulatorKey}_gradual`]) {
                   simulatorsRef.current[`${simulatorKey}_gradual`] = createGradualChangeSimulator(sensorType)
                 }
                 const gradualSimulator = simulatorsRef.current[`${simulatorKey}_gradual`]
                 sensorData = gradualSimulator()
                 break
-
+              }
+              case 'gentle': {
+                if (!simulatorsRef.current[`${simulatorKey}_gradual`]) {
+                  simulatorsRef.current[`${simulatorKey}_gradual`] = createGradualChangeSimulator(sensorType)
+                }
+                const gentleSimulator = simulatorsRef.current[`${simulatorKey}_gradual`]
+                sensorData = gentleSimulator(1)
+                break
+              }
               case 'random':
               default:
                 sensorData = generateSensorData(sensorType)
@@ -201,6 +218,53 @@ export const SimulationProvider = ({ children }) => {
             sensorData.deviceId = `SIM_${site.id.slice(-4)}_${sensorType.slice(0, 3).toUpperCase()}_${sensorNum}`
 
             await updateSensorData(site.id, sensorType, sensorNum, sensorData)
+          }
+        } else {
+          // 최후 수단: 사이트 메타 정보 활용
+          const sensorTypes = site.sensorTypes || ['ultrasonic']
+          const totalSensorCount = site.sensorCount || 1
+          const sensorsPerType = sensorTypes.length === 1
+            ? totalSensorCount
+            : Math.max(1, Math.floor(totalSensorCount / sensorTypes.length))
+
+          for (const sensorType of sensorTypes) {
+            for (let sensorNum = 1; sensorNum <= sensorsPerType; sensorNum++) {
+              const simulatorKey = `${site.id}_${sensorType}_${sensorNum}`
+              let sensorData
+
+              switch (mode) {
+                case 'scenario':
+                  if (!simulatorsRef.current[`${simulatorKey}_scenario`]) {
+                    simulatorsRef.current[`${simulatorKey}_scenario`] = createStatusScenario()
+                  }
+                  const scenarioStatus = simulatorsRef.current[`${simulatorKey}_scenario`]()
+                  sensorData = generateSensorData(sensorType, scenarioStatus)
+                  break
+                case 'gradual':
+                  if (!simulatorsRef.current[`${simulatorKey}_gradual`]) {
+                    simulatorsRef.current[`${simulatorKey}_gradual`] = createGradualChangeSimulator(sensorType)
+                  }
+                  const gradualSimulator = simulatorsRef.current[`${simulatorKey}_gradual`]
+                  sensorData = gradualSimulator()
+                  break
+                case 'gentle':
+                  if (!simulatorsRef.current[`${simulatorKey}_gradual`]) {
+                    simulatorsRef.current[`${simulatorKey}_gradual`] = createGradualChangeSimulator(sensorType)
+                  }
+                  const gentleSimulator = simulatorsRef.current[`${simulatorKey}_gradual`]
+                  sensorData = gentleSimulator(1)
+                  break
+                case 'random':
+                default:
+                  sensorData = generateSensorData(sensorType)
+                  break
+              }
+
+              sensorData.location = `${sensorType} 센서 ${sensorNum}번`
+              sensorData.deviceId = `SIM_${site.id.slice(-4)}_${sensorType.slice(0, 3).toUpperCase()}_${sensorNum}`
+
+              await updateSensorData(site.id, sensorType, sensorNum, sensorData)
+            }
           }
         }
       }
@@ -237,21 +301,53 @@ export const SimulationProvider = ({ children }) => {
   }
 
   /**
-   * 기존 단일 센서 키 정리 (다중 센서 전환 시)
+   * 기존 센서 키 정리 (다중 센서 전환 시 + 중복 키 제거)
    */
   const cleanupLegacySensorKeys = async (siteId) => {
     try {
-      // 기존 ultrasonic, temperature 등 단일 키 삭제
-      const legacyKeys = ['ultrasonic', 'temperature', 'humidity', 'pressure']
+      // 현재 센서 데이터 확인
+      const siteRef = ref(database, `sensors/${siteId}`)
+      const snapshot = await get(siteRef)
+      const currentData = snapshot.val()
 
-      for (const key of legacyKeys) {
-        const legacyRef = ref(database, `sensors/${siteId}/${key}`)
-        await set(legacyRef, null)
+      if (!currentData) {
+        debug(`🧹 ${siteId}: 센서 데이터 없음 - 정리 건너뜀`)
+        return
       }
 
-      debug(`🧹 ${siteId}: 기존 단일 센서 키 정리 완료`)
+      const keysToDelete = []
+
+      // 1. 기존 단일 키 삭제
+      const legacyKeys = ['ultrasonic', 'temperature', 'humidity', 'pressure']
+      legacyKeys.forEach(key => {
+        if (currentData[key]) {
+          keysToDelete.push(key)
+        }
+      })
+
+      // 2. 패딩 없는 다중 센서 키 삭제 (패딩 있는 키가 있는 경우)
+      Object.keys(currentData).forEach(key => {
+        if (key.includes('_') && !key.includes('_0')) { // _01, _02가 아닌 _1, _2 형태
+          const [sensorType, sensorNum] = key.split('_')
+          const paddedKey = `${sensorType}_${sensorNum.padStart(2, '0')}`
+
+          // 패딩된 키가 존재하면 패딩 없는 키 삭제
+          if (currentData[paddedKey]) {
+            keysToDelete.push(key)
+          }
+        }
+      })
+
+      // 삭제 실행
+      for (const key of keysToDelete) {
+        const keyRef = ref(database, `sensors/${siteId}/${key}`)
+        await set(keyRef, null)
+        debug(`🗑️ ${siteId}: 중복/레거시 키 삭제 - ${key}`)
+      }
+
+      debug(`🧹 ${siteId}: 센서 키 정리 완료 (${keysToDelete.length}개 삭제)`)
     } catch (error) {
-      logError('기존 센서 키 정리 오류:', error)
+      logError('센서 키 정리 오류:', error)
     }
   }
 
@@ -271,9 +367,35 @@ export const SimulationProvider = ({ children }) => {
 
     debug(`🎯 시뮬레이션 대상: ${simulationConfig.sites.length}개 사이트`)
 
-    // 모든 사이트의 기존 단일 센서 키 정리
+    // 활성 사이트의 기존 단일 센서 키 정리
     for (const site of simulationConfig.sites.filter(s => s.status === 'active')) {
       await cleanupLegacySensorKeys(site.id)
+    }
+
+    // 비활성 및 점검중 현장의 센서를 오프라인으로 설정
+    const inactiveSites = simulationConfig.sites.filter(s => s.status !== 'active')
+    for (const site of inactiveSites) {
+      debug(`🔴 ${site.name} (${site.status}) 현장 센서를 오프라인으로 설정`)
+
+      const sensorTypes = site.sensorTypes || ['ultrasonic']
+      const totalSensorCount = site.sensorCount || 1
+      const sensorsPerType = sensorTypes.length === 1 ? totalSensorCount : Math.max(1, Math.floor(totalSensorCount / sensorTypes.length))
+
+      for (const sensorType of sensorTypes) {
+        const sensorCount = sensorTypes.length === 1 ? totalSensorCount : sensorsPerType
+
+        for (let sensorNum = 1; sensorNum <= sensorCount; sensorNum++) {
+          const sensorKey = `${sensorType}_${sensorNum.toString().padStart(2, '0')}`
+          const sensorRef = ref(database, `sensors/${site.id}/${sensorKey}`)
+
+          // 오프라인 상태로 설정
+          await set(sensorRef, {
+            status: 'offline',
+            timestamp: Date.now(),
+            [sensorType]: null
+          })
+        }
+      }
     }
 
     setIsRunning(true)
@@ -292,7 +414,7 @@ export const SimulationProvider = ({ children }) => {
   /**
    * 시뮬레이션 중지
    */
-  const stopSimulation = () => {
+  const stopSimulation = async () => {
     debug('⏹️ 전역 센서 시뮬레이션 중지')
 
     if (intervalRef.current) {
@@ -301,6 +423,38 @@ export const SimulationProvider = ({ children }) => {
     }
 
     setIsRunning(false)
+
+    // 비활성 및 점검중 현장의 센서를 오프라인으로 설정
+    try {
+      const { sites } = simulationConfig
+      const inactiveSites = sites.filter(s => s.status !== 'active')
+
+      for (const site of inactiveSites) {
+        debug(`🔴 ${site.name} (${site.status}) 현장 센서를 오프라인으로 설정`)
+
+        const sensorTypes = site.sensorTypes || ['ultrasonic']
+        const totalSensorCount = site.sensorCount || 1
+        const sensorsPerType = sensorTypes.length === 1 ? totalSensorCount : Math.max(1, Math.floor(totalSensorCount / sensorTypes.length))
+
+        for (const sensorType of sensorTypes) {
+          const sensorCount = sensorTypes.length === 1 ? totalSensorCount : sensorsPerType
+
+          for (let sensorNum = 1; sensorNum <= sensorCount; sensorNum++) {
+            const sensorKey = `${sensorType}_${sensorNum.toString().padStart(2, '0')}`
+            const sensorRef = ref(database, `sensors/${site.id}/${sensorKey}`)
+
+            // 오프라인 상태로 설정
+            await set(sensorRef, {
+              status: 'offline',
+              timestamp: Date.now(),
+              [sensorType]: null
+            })
+          }
+        }
+      }
+    } catch (error) {
+      console.error('비활성 현장 오프라인 설정 오류:', error)
+    }
 
     // 시뮬레이터 초기화
     simulatorsRef.current = {}
@@ -393,6 +547,50 @@ export const SimulationProvider = ({ children }) => {
 
           debug(`🏢 감지된 사이트: ${sitesList.length}개`)
 
+          // 시뮬레이션 실행 중이라면, 새로 활성화된 사이트의 센서를 즉시 시뮬레이션에 포함
+          if (isRunning) {
+            const prevSites = simulationConfig.sites
+            const newActiveSites = sitesList.filter(site =>
+              site.status === 'active' &&
+              (!prevSites.find(prev => prev.id === site.id) ||
+               prevSites.find(prev => prev.id === site.id)?.status !== 'active')
+            )
+
+            // 새로 활성화된 현장들의 센서를 정상 상태로 즉시 설정
+            for (const site of newActiveSites) {
+              console.log(`🟢 [시뮬레이션] 새로 활성화된 현장: ${site.name} (${site.id})`)
+              debug(`🟢 새로 활성화된 현장 ${site.name} 센서 초기화`)
+
+              const sensorTypes = site.sensorTypes || ['ultrasonic']
+              const totalSensorCount = site.sensorCount || 1
+              const sensorsPerType = sensorTypes.length === 1 ? totalSensorCount : Math.max(1, Math.floor(totalSensorCount / sensorTypes.length))
+
+              for (const sensorType of sensorTypes) {
+                const sensorCount = sensorTypes.length === 1 ? totalSensorCount : sensorsPerType
+
+                for (let sensorNum = 1; sensorNum <= sensorCount; sensorNum++) {
+                  // 즉시 정상 상태 센서 데이터 생성 (여러 번 시도로 확실히 적용)
+                  setTimeout(async () => {
+                    await forceSensorStatus(site.id, sensorType, sensorNum, 'normal')
+                  }, 100)
+
+                  // 추가 확인을 위해 한 번 더 실행
+                  setTimeout(async () => {
+                    await forceSensorStatus(site.id, sensorType, sensorNum, 'normal')
+                    // UI 강제 새로고침 트리거
+                    console.log(`✅ [시뮬레이션] ${site.name}의 ${sensorType}_${sensorNum} 센서 정상 상태로 설정 완료`)
+                  }, 500)
+
+                  // 마지막 수단: 1초 후 페이지 강제 새로고침
+                  setTimeout(() => {
+                    console.log(`🔄 [시뮬레이션] ${site.name} 현장 활성화 완료 - UI 새로고침`)
+                    window.dispatchEvent(new Event('storage')) // React 상태 업데이트 트리거
+                  }, 1000)
+                }
+              }
+            }
+          }
+
           setSimulationConfig(prev => ({
             interval: prev.interval,
             mode: prev.mode,
@@ -430,12 +628,21 @@ export const SimulationProvider = ({ children }) => {
     forceSensorStatus,
     setAllSensorsStatus,
     loadSites,
+    cleanupAllSensorKeys: async () => {
+      const { sites } = simulationConfig
+      console.log('🧹 모든 현장 센서 키 정리 시작')
+      for (const site of sites) {
+        await cleanupLegacySensorKeys(site.id)
+      }
+      console.log('✅ 모든 현장 센서 키 정리 완료')
+    },
 
     // 유틸리티
     availableModes: [
-      { value: 'random', label: '랜덤 시뮬레이션' },
+      { value: 'gentle', label: '미미한 변화' },
+      { value: 'gradual', label: '점진적 변화' },
       { value: 'scenario', label: '시나리오 기반' },
-      { value: 'gradual', label: '점진적 변화' }
+      { value: 'random', label: '랜덤 시뮬레이션' }
     ],
     availableStatuses: ['normal', 'warning', 'alert', 'offline']
   }
