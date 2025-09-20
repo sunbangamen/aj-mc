@@ -12,19 +12,46 @@ const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, site
   const { primarySensor, allSensors, statusColor, statusLabel, lastUpdate } = useMemo(() => {
     const primary = getLegacySensorData(siteData)
     const sensors = extractSensorsFromSiteData(siteData)
-    const color = STATUS_COLORS[primary?.status || 'offline']
-    const label = STATUS_LABELS[primary?.status || 'offline']
+
+    // 현장 상태에 따른 센서 상태 결정
+    let finalStatus, finalColor, finalLabel
+
+    if (siteStatus === 'active') {
+      // 활성 현장: 실제 센서 상태 사용하되, 데이터 신선도 확인
+      const now = Date.now()
+      const dataAge = primary?.timestamp ? (now - primary.timestamp) : Infinity
+      const isDataFresh = dataAge < 60000 // 1분 이내 데이터
+
+      if (primary?.status && isDataFresh) {
+        // 최신 데이터가 있으면 센서 상태 사용
+        finalStatus = primary.status
+        finalColor = STATUS_COLORS[finalStatus]
+        finalLabel = STATUS_LABELS[finalStatus]
+      } else {
+        // 오래된 데이터이면 오프라인으로 처리
+        finalStatus = 'offline'
+        finalColor = STATUS_COLORS.offline
+        finalLabel = '오프라인'
+      }
+    } else {
+      // 점검중/비활성 현장: 강제로 오프라인 상태
+      finalStatus = 'offline'
+      finalColor = STATUS_COLORS.offline
+      finalLabel = siteStatus === 'maintenance' ? '점검중' : '비활성'
+    }
+
     const last = primary?.timestamp
       ? new Date(primary.timestamp).toLocaleTimeString()
       : '업데이트 없음'
+
     return {
       primarySensor: primary,
       allSensors: sensors,
-      statusColor: color,
-      statusLabel: label,
+      statusColor: finalColor,
+      statusLabel: finalLabel,
       lastUpdate: last,
     }
-  }, [siteData])
+  }, [siteData, siteStatus])
 
   return (
     <Link to={`/site/${siteId}`} className="site-card" style={siteStatus !== 'active' ? { opacity: 0.85 } : undefined}>
@@ -57,6 +84,9 @@ const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, site
               <div className="sensor-main-info">
                 <span className="sensor-name">{sensor.displayName}:</span>
                 <span className="sensor-value">{sensor.value || '---'} {sensor.unit}</span>
+                {sensor.location && (
+                  <span className="sensor-location">📍 {sensor.location}</span>
+                )}
               </div>
               {sensor.data && (
                 <div className="sensor-hw-status">
