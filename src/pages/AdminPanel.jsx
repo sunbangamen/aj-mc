@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useAlertSystem } from '../hooks/useAlertSystem'
 import { useSimulation } from '../contexts/SimulationContext'
 import { useSiteManagement, useSites } from '../hooks/useSiteManagement'
+import { debug } from '../utils/log'
 import ThresholdConfig from '../components/ThresholdConfig'
 import AlertManager from '../components/AlertManager'
 import HardwareMetadataPanel from '../components/HardwareMetadataPanel'
@@ -68,7 +69,7 @@ const AdminPanel = () => {
   }
 
   const handleSiteSelect = async (siteId) => {
-    console.log('사이트 선택:', siteId)
+    debug('사이트 선택:', siteId)
     setSelectedSiteId(siteId)
 
     // URL 업데이트
@@ -77,7 +78,7 @@ const AdminPanel = () => {
       newParams.set('siteId', siteId)
       const loadedThresholds = await loadSiteThresholds(siteId)
       setSiteThresholds(loadedThresholds)
-      console.log('사이트별 임계값 로드:', loadedThresholds)
+      debug('사이트별 임계값 로드:', loadedThresholds)
     } else {
       newParams.delete('siteId')
       setSiteThresholds(thresholds) // 전역 설정 사용
@@ -95,7 +96,7 @@ const AdminPanel = () => {
     }
 
     if (siteParam && siteParam !== selectedSiteId) {
-      console.log('사이트 파라미터 처리:', siteParam)
+      debug('사이트 파라미터 처리:', siteParam)
       setSelectedSiteId(siteParam)
       // thresholds 탭으로 자동 이동 (아직 설정되지 않은 경우)
       if (!tabParam) {
@@ -105,7 +106,7 @@ const AdminPanel = () => {
       if (loadSiteThresholds) {
         loadSiteThresholds(siteParam).then(loadedThresholds => {
           setSiteThresholds(loadedThresholds)
-          console.log('사이트별 임계값 로드 완료:', loadedThresholds)
+          debug('사이트별 임계값 로드 완료:', loadedThresholds)
         }).catch(error => {
           console.error('사이트 임계값 로드 오류:', error)
           setSiteThresholds(thresholds)

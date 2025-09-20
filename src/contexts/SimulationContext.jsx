@@ -6,6 +6,7 @@ import {
   createStatusScenario,
   createGradualChangeSimulator,
 } from '../utils/sensorSimulator'
+import { generateSensorKey, getSensorPath, transformFirebaseObjectToArray } from '../types/sensor'
 import { debug, error as logError } from '../utils/log'
 
 const SimulationContext = createContext()
@@ -35,6 +36,22 @@ export const SimulationProvider = ({ children }) => {
 
   const intervalRef = useRef(null)
   const simulatorsRef = useRef({}) // 사이트별 시뮬레이터 저장
+  const timeoutsRef = useRef(new Set()) // timeout ID들을 관리하기 위한 ref
+
+  // timeout 관리 헬퍼 함수들
+  const addManagedTimeout = (callback, delay) => {
+    const timeoutId = setTimeout(() => {
+      timeoutsRef.current.delete(timeoutId)
+      callback()
+    }, delay)
+    timeoutsRef.current.add(timeoutId)
+    return timeoutId
+  }
+
+  const clearAllManagedTimeouts = () => {
+    timeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId))
+    timeoutsRef.current.clear()
+  }
 
   /**
    * 사이트 목록을 가져와서 시뮬레이션 대상 설정
@@ -46,10 +63,7 @@ export const SimulationProvider = ({ children }) => {
       const sitesData = snapshot.val()
 
       if (sitesData) {
-        const sitesList = Object.entries(sitesData).map(([id, data]) => ({
-          id,
-          ...data
-        }))
+        const sitesList = transformFirebaseObjectToArray(sitesData)
         setSimulationConfig(prev => ({
           ...prev,
           sites: sitesList
@@ -68,8 +82,8 @@ export const SimulationProvider = ({ children }) => {
    */
   const updateSensorData = async (siteId, sensorType, sensorNumber, data) => {
     try {
-      // 센서 키 생성 - 일관된 패딩 형식 사용 (예: ultrasonic_01, temperature_01)
-      const sensorKey = sensorNumber ? `${sensorType}_${sensorNumber.toString().padStart(2, '0')}` : sensorType
+      // 센서 키 생성 - 운영 표준 비패딩 형식 사용 (예: ultrasonic_1)
+      const sensorKey = sensorNumber ? generateSensorKey(sensorType, sensorNumber) : sensorType
 
       // 현재 센서 데이터 업데이트
       const sensorRef = ref(database, `sensors/${siteId}/${sensorKey}`)
@@ -326,18 +340,29 @@ export const SimulationProvider = ({ children }) => {
         }
       })
 
-      // 2. 패딩 없는 다중 센서 키 삭제 (패딩 있는 키가 있는 경우)
-      Object.keys(currentData).forEach(key => {
-        if (key.includes('_') && !key.includes('_0')) { // _01, _02가 아닌 _1, _2 형태
-          const [sensorType, sensorNum] = key.split('_')
-          const paddedKey = `${sensorType}_${sensorNum.padStart(2, '0')}`
-
-          // 패딩된 키가 존재하면 패딩 없는 키 삭제
-          if (currentData[paddedKey]) {
-            keysToDelete.push(key)
+      // 2. 패딩된 다중 센서 키 정리 (운영 표준은 비패딩: _1)
+      const allKeys = Object.keys(currentData)
+      for (const key of allKeys) {
+        if (key.includes('_')) {
+          const [sensorType, numPart] = key.split('_')
+          // 패딩된 형태 감지: 0으로 시작하는 숫자
+          if (/^0\d+$/.test(numPart)) {
+            const unpaddedNum = String(parseInt(numPart, 10))
+            const unpaddedKey = `${sensorType}_${unpaddedNum}`
+            if (currentData[unpaddedKey]) {
+              // 둘 다 있으면 패딩 키 삭제
+              keysToDelete.push(key)
+            } else {
+              // 패딩만 있으면 마이그레이션: 새 키로 복사 후 기존 삭제
+              const srcRef = ref(database, `sensors/${siteId}/${key}`)
+              const dstRef = ref(database, `sensors/${siteId}/${unpaddedKey}`)
+              await set(dstRef, currentData[key])
+              await set(srcRef, null)
+              debug(`🔁 ${siteId}: ${key} → ${unpaddedKey} 마이그레이션 완료`)
+            }
           }
         }
-      })
+      }
 
       // 삭제 실행
       for (const key of keysToDelete) {
@@ -386,8 +411,8 @@ export const SimulationProvider = ({ children }) => {
         const sensorCount = sensorTypes.length === 1 ? totalSensorCount : sensorsPerType
 
         for (let sensorNum = 1; sensorNum <= sensorCount; sensorNum++) {
-          const sensorKey = `${sensorType}_${sensorNum.toString().padStart(2, '0')}`
-          const sensorRef = ref(database, `sensors/${site.id}/${sensorKey}`)
+          const sensorKey = generateSensorKey(sensorType, sensorNum)
+          const sensorRef = ref(database, getSensorPath(site.id, sensorKey))
 
           // 오프라인 상태로 설정
           await set(sensorRef, {
@@ -423,6 +448,9 @@ export const SimulationProvider = ({ children }) => {
       intervalRef.current = null
     }
 
+    // 진행 중인 모든 timeout들을 정리
+    clearAllManagedTimeouts()
+
     setIsRunning(false)
 
     // 비활성 및 점검중 현장의 센서를 오프라인으로 설정
@@ -441,8 +469,8 @@ export const SimulationProvider = ({ children }) => {
           const sensorCount = sensorTypes.length === 1 ? totalSensorCount : sensorsPerType
 
           for (let sensorNum = 1; sensorNum <= sensorCount; sensorNum++) {
-            const sensorKey = `${sensorType}_${sensorNum.toString().padStart(2, '0')}`
-            const sensorRef = ref(database, `sensors/${site.id}/${sensorKey}`)
+            const sensorKey = generateSensorKey(sensorType, sensorNum)
+            const sensorRef = ref(database, getSensorPath(site.id, sensorKey))
 
             // 오프라인 상태로 설정
             await set(sensorRef, {
@@ -491,7 +519,7 @@ export const SimulationProvider = ({ children }) => {
 
     await updateSensorData(siteId, sensorType, sensorNumber, sensorData)
 
-    const sensorKey = `${sensorType}_${sensorNumber.toString().padStart(2, '0')}`
+    const sensorKey = generateSensorKey(sensorType, sensorNumber)
     debug(`🎯 강제 설정: ${siteId}/${sensorKey} → ${status}`)
   }
 
@@ -524,6 +552,8 @@ export const SimulationProvider = ({ children }) => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
       }
+      // 모든 관리되는 timeout들을 정리
+      clearAllManagedTimeouts()
     }
   }, [])
 
@@ -541,10 +571,7 @@ export const SimulationProvider = ({ children }) => {
         debug('📥 사이트 목록 업데이트 수신')
 
         if (sitesData) {
-          const sitesList = Object.entries(sitesData).map(([id, data]) => ({
-            id,
-            ...data
-          }))
+          const sitesList = transformFirebaseObjectToArray(sitesData)
 
           debug(`🏢 감지된 사이트: ${sitesList.length}개`)
 
@@ -570,20 +597,20 @@ export const SimulationProvider = ({ children }) => {
                 const sensorCount = sensorTypes.length === 1 ? totalSensorCount : sensorsPerType
 
                 for (let sensorNum = 1; sensorNum <= sensorCount; sensorNum++) {
-                  // 즉시 정상 상태 센서 데이터 생성 (여러 번 시도로 확실히 적용)
-                  setTimeout(async () => {
+                  // 즉시 정상 상태 센서 데이터 생성 (관리되는 timeout 사용)
+                  addManagedTimeout(async () => {
                     await forceSensorStatus(site.id, sensorType, sensorNum, 'normal')
                   }, 100)
 
                   // 추가 확인을 위해 한 번 더 실행
-                  setTimeout(async () => {
+                  addManagedTimeout(async () => {
                     await forceSensorStatus(site.id, sensorType, sensorNum, 'normal')
                     // UI 강제 새로고침 트리거
                     console.log(`✅ [시뮬레이션] ${site.name}의 ${sensorType}_${sensorNum} 센서 정상 상태로 설정 완료`)
                   }, 500)
 
                   // 마지막 수단: 1초 후 페이지 강제 새로고침
-                  setTimeout(() => {
+                  addManagedTimeout(() => {
                     console.log(`🔄 [시뮬레이션] ${site.name} 현장 활성화 완료 - UI 새로고침`)
                     window.dispatchEvent(new Event('storage')) // React 상태 업데이트 트리거
                   }, 1000)

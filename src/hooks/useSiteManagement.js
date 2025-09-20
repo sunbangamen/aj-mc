@@ -6,7 +6,6 @@ import {
   set,
   update,
   remove,
-  push,
   query,
   orderByChild
 } from 'firebase/database'

@@ -4,6 +4,7 @@ import { useSiteSensorData } from '../hooks/useSensorData'
 import { useSite } from '../hooks/useSiteManagement'
 import { STATUS_COLORS, STATUS_LABELS, extractSensorsFromSiteData, getLegacySensorData } from '../types/sensor'
 import { useAlertSystem } from '../hooks/useAlertSystem'
+import { debug } from '../utils/log'
 import MeasurementTable from '../components/MeasurementTable'
 import SensorChart from '../components/SensorChart'
 import HardwareStatusPanel from '../components/HardwareStatusPanel'
@@ -35,56 +36,54 @@ function SiteMonitor() {
   const [siteThresholds, setSiteThresholds] = React.useState({})
   const [thresholdsLoaded, setThresholdsLoaded] = React.useState(false)
 
-  // 사이트별 임계값 로드
+  // thresholds를 useRef로 관리하여 무한 루프 방지
+  const thresholdsRef = React.useRef(thresholds)
   React.useEffect(() => {
-    let mounted = true
+    thresholdsRef.current = thresholds
+  }, [thresholds])
 
-    const loadThresholds = async () => {
-      console.log('SiteMonitor 임계값 로딩 시작:', siteId)
+  // 사이트별 임계값 로드 (useCallback으로 최적화)
+  const loadThresholds = React.useCallback(async (mounted) => {
+    debug('SiteMonitor 임계값 로딩 시작:', siteId)
 
-      if (siteId && loadSiteThresholds) {
-        try {
-          const loadedThresholds = await loadSiteThresholds(siteId)
-          if (mounted) {
-            console.log('SiteMonitor 사이트별 임계값 로드 완료:', loadedThresholds)
-            setSiteThresholds(loadedThresholds)
-            setThresholdsLoaded(true)
-          }
-        } catch (error) {
-          if (mounted) {
-            console.error('사이트 임계값 로드 오류:', error)
-            setSiteThresholds(thresholds) // 기본값 사용
-            setThresholdsLoaded(true)
-          }
+    if (siteId && loadSiteThresholds) {
+      try {
+        const loadedThresholds = await loadSiteThresholds(siteId)
+        if (mounted.current) {
+          debug('SiteMonitor 사이트별 임계값 로드 완료:', loadedThresholds)
+          setSiteThresholds(loadedThresholds)
+          setThresholdsLoaded(true)
         }
-      } else if (mounted) {
-        console.log('SiteMonitor 기본 임계값 사용')
-        setSiteThresholds(thresholds)
-        setThresholdsLoaded(true)
+      } catch (error) {
+        if (mounted.current) {
+          console.error('사이트 임계값 로드 오류:', error)
+          setSiteThresholds(thresholdsRef.current) // 기본값 사용
+          setThresholdsLoaded(true)
+        }
       }
-    }
-
-    loadThresholds()
-
-    return () => {
-      mounted = false
-    }
-  }, [siteId]) // loadSiteThresholds와 thresholds 제거
-
-  // 기본 임계값이 변경될 때만 별도로 처리
-  React.useEffect(() => {
-    if (!siteId && Object.keys(thresholds).length > 0) {
-      setSiteThresholds(thresholds)
+    } else if (mounted.current) {
+      debug('SiteMonitor 기본 임계값 사용')
+      setSiteThresholds(thresholdsRef.current)
       setThresholdsLoaded(true)
     }
-  }, [thresholds, siteId])
+  }, [siteId, loadSiteThresholds])
+
+  React.useEffect(() => {
+    const mounted = { current: true }
+    loadThresholds(mounted)
+
+    return () => {
+      mounted.current = false
+    }
+  }, [loadThresholds])
+
 
   // 현재 사이트의 알림만 필터링
   const siteAlerts = alerts.filter(alert => alert.siteId === siteId)
 
   // 센서 위치 업데이트 핸들러
   const handleLocationUpdate = (sensorKey, newLocation) => {
-    console.log(`📍 센서 위치 업데이트: ${sensorKey} → ${newLocation}`)
+    debug(`📍 센서 위치 업데이트: ${sensorKey} → ${newLocation}`)
     // 실시간 데이터가 자동으로 반영되므로 별도 처리 불필요
     // useSiteSensorData 훅이 Firebase 변경사항을 자동으로 감지합니다
   }
@@ -134,13 +133,13 @@ function SiteMonitor() {
   }
 
   // 다중 센서 데이터 처리
-  console.log('🔍 [SiteMonitor] sensorData:', sensorData)
+  debug('🔍 [SiteMonitor] sensorData:', sensorData)
   const allSensors = extractSensorsFromSiteData(sensorData)
-  console.log('🔍 [SiteMonitor] allSensors:', allSensors)
-  console.log('🔍 [SiteMonitor] allSensors 키들:', allSensors.map(s => s.key))
-  console.log('🔍 [SiteMonitor] allSensors 개수:', allSensors.length)
+  debug('🔍 [SiteMonitor] allSensors:', allSensors)
+  debug('🔍 [SiteMonitor] allSensors 키들:', allSensors.map(s => s.key))
+  debug('🔍 [SiteMonitor] allSensors 개수:', allSensors.length)
   const primarySensor = getLegacySensorData(sensorData)
-  console.log('🔍 [SiteMonitor] primarySensor:', primarySensor)
+  debug('🔍 [SiteMonitor] primarySensor:', primarySensor)
 
   // 주 센서가 없으면 첫 번째 센서 사용
   const mainSensor = primarySensor || (allSensors.length > 0 ? allSensors[0].data : null)

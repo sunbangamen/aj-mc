@@ -49,8 +49,8 @@
 경로: `/sensors/{siteId}/{sensorKey}`
 
 센서 키 규칙:
-- 표준: `{sensorType}_{NN}` (2자리 패딩) 예: `ultrasonic_01`, `temperature_01`
-- 레거시 호환: `{sensorType}` 또는 `{sensorType}_{n}` (패딩 없음)도 읽기 지원함. 신규 데이터는 패딩 형태를 권장합니다.
+- 표준(운영): `{sensorType}_{n}` (비패딩) 예: `ultrasonic_1`, `temperature_1`
+- 레거시 호환: `{sensorType}` 또는 `{sensorType}_{NN}`(패딩)도 읽기 지원. 신규 데이터는 비패딩을 권장합니다.
 
 센서 데이터 공통 필드:
 - `timestamp` (ms), `lastUpdate` (ms), `status` (`normal|warning|alert|offline`)
@@ -61,23 +61,23 @@
   - 압력: `pressure` (hPa) 및 `value` 미러링
 - 선택 메타데이터(하드웨어/운영): `deviceId`, `location`, `batteryLevel`, `signalStrength`, `firmwareVersion`, `hardwareModel`, `installDate`, `lastMaintenance`, `calibrationDate`, `accuracy`, `reliability`, `errorCount`, `consecutiveErrors` 등
 
-예시(다중 센서, 패딩 키):
+예시(다중 센서, 비패딩 키):
 
 ```
 /sensors/
 └── site_1700000000000_abcd12/
-    ├── ultrasonic_01/
+    ├── ultrasonic_1/
     │   ├── distance: 145.2
     │   ├── status: "normal"
     │   ├── timestamp: 1700001000000
     │   ├── lastUpdate: 1700001000000
-    │   ├── deviceId: "SIM_AB12_ULS_01"
+    │   ├── deviceId: "SIM_AB12_ULS_1"
     │   ├── batteryLevel: 92
     │   ├── signalStrength: -48
     │   └── history/
     │       ├── 1700000970000: { distance: 150.1, status: "normal", timestamp: 1700000970000, ... }
     │       └── 1700001000000: { distance: 145.2, status: "normal", timestamp: 1700001000000, ... }
-    └── temperature_01/
+    └── temperature_1/
         ├── temperature: 24.3
         ├── value: 24.3
         ├── status: "normal"
@@ -104,12 +104,12 @@
 {
   "alerts": {
     "active": {
-      "site_..._ultrasonic_01_alert_1700001000123_xxx": {
-        "id": "site_..._ultrasonic_01_alert_1700001000123_xxx",
+      "site_..._ultrasonic_1_alert_1700001000123_xxx": {
+        "id": "site_..._ultrasonic_1_alert_1700001000123_xxx",
         "type": "alert",            // warning|alert|critical|offline|...
         "priority": 2,               // 낮을수록 중요
         "siteId": "site_1700000000000_abcd12",
-        "sensorKey": "ultrasonic_01",
+        "sensorKey": "ultrasonic_1",
         "message": "🚨 경고: ultrasonic 센서 임계값 초과 (210)",
         "timestamp": 1700001000123,
         "data": { "value": 210, "unit": "cm" },
