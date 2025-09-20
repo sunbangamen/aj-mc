@@ -1,12 +1,13 @@
 import React, { useMemo, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { STATUS_COLORS, STATUS_LABELS, extractSensorsFromSiteData } from '../types/sensor'
+import { Link, useNavigate } from 'react-router-dom'
+import { STATUS_COLORS, STATUS_LABELS, extractSensorsFromSiteData, parseSensorKey, getSensorDisplayName } from '../types/sensor'
 import { SITE_STATUS_LABELS, SITE_STATUS_COLORS } from '../types/site'
 import { useAlertSystem } from '../hooks/useAlertSystem'
 import { computeRepresentativeStatus } from '../utils/representativeStatus'
 
 const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, siteStatus = 'active' }) {
   const { loadThresholds, loadSiteThresholds } = useAlertSystem()
+  const navigate = useNavigate()
   const [timeouts, setTimeouts] = useState(null)
 
   useEffect(() => {
@@ -61,11 +62,24 @@ const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, site
       </h3>
       <div className="status-badge" style={{ backgroundColor: statusColor, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
         {statusLabel}
-        {statusLabel !== '정상' && causeKey && (
-          <span className="rep-cause" title={`대표 상태 원인 센서: ${causeKey}`} style={{ background: '#ffffff33', borderRadius: 10, padding: '2px 6px', fontSize: '0.75rem' }}>
-            원인: {causeKey}
-          </span>
-        )}
+        {statusLabel !== '정상' && causeKey && (() => {
+          const parsed = parseSensorKey(causeKey)
+          const label = parsed ? `${getSensorDisplayName(`${parsed.sensorType}`)} ${parsed.sensorNumber}` : causeKey
+          return (
+            <span
+              className="rep-cause"
+              title={`대표 상태 원인 센서: ${label}`}
+              style={{ background: '#ffffff33', borderRadius: 10, padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                navigate(`/site/${siteId}#sensor-section-${causeKey}`)
+              }}
+            >
+              원인: {label} ↗
+            </span>
+          )
+        })()}
       </div>
 
       {allSensors.length > 0 ? (
