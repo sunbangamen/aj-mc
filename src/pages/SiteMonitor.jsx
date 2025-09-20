@@ -389,6 +389,7 @@ function SiteMonitor() {
                 <HardwareStatusPanel
                   sensorData={sensor.data}
                   sensorKey={sensor.key}
+                  siteId={siteId}
                 />
 
                 {/* 개별 센서 측정 이력 테이블 */}

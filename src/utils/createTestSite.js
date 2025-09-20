@@ -1,5 +1,11 @@
-import { ref, set, get, remove } from 'firebase/database'
+import { ref, set, get, remove, update } from 'firebase/database'
 import { database } from '../services/firebase'
+import {
+  generateHardwareMetadata,
+  generateMaintenanceInfo,
+  generateQualityMetrics,
+  generateSensorLocation
+} from './sensorSimulator'
 
 /**
  * 테스트 사이트 자동 생성 함수
@@ -78,15 +84,37 @@ export const createTestSensorData = async () => {
       // 3) ultrasonic의 경우 아무것도 없으면 기본 생성(다른 타입은 생성하지 않음)
       if (type === 'ultrasonic' && !numberedSnap.exists() && !legacySnap.exists()) {
         const now = Date.now()
+        const status = 'normal'
+        const location = generateSensorLocation('ultrasonic', 1)
         const testSensorData = {
           distance: 75,
-          status: 'normal',
+          status,
           timestamp: now,
-          lastUpdate: now
+          lastUpdate: now,
+          // 위치 및 하드웨어/운영 메타데이터 기본값 포함
+          ...location,
+          ...generateHardwareMetadata('ultrasonic'),
+          ...generateMaintenanceInfo(),
+          ...generateQualityMetrics(status)
         }
         await set(numberedRef, testSensorData)
         console.log('✅ 테스트 센서 데이터(ultrasonic_1)가 생성되었습니다.')
         results.push('ultrasonic: created ultrasonic_1')
+      }
+    }
+
+    // 보강: 이미 존재하는 센서에도 하드웨어 메타데이터가 없으면 채워넣기
+    const existingUltrasonicRef = ref(database, 'sensors/test/ultrasonic_1')
+    const existingSnap = await get(existingUltrasonicRef)
+    if (existingSnap.exists()) {
+      const data = existingSnap.val() || {}
+      const patch = {}
+      if (data.batteryLevel === undefined) Object.assign(patch, generateHardwareMetadata('ultrasonic'))
+      if (data.installDate === undefined) Object.assign(patch, generateMaintenanceInfo())
+      if (data.accuracy === undefined || data.reliability === undefined) Object.assign(patch, generateQualityMetrics(data.status || 'normal'))
+      if (Object.keys(patch).length > 0) {
+        await update(existingUltrasonicRef, patch)
+        results.push('ultrasonic_1: backfilled hardware/maintenance/quality')
       }
     }
 
