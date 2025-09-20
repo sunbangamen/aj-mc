@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { STATUS_COLORS, STATUS_LABELS, extractSensorsFromSiteData } from '../types/sensor'
 import { SITE_STATUS_LABELS, SITE_STATUS_COLORS } from '../types/site'
 import { useAlertSystem } from '../hooks/useAlertSystem'
+import { computeRepresentativeStatus } from '../utils/representativeStatus'
 
 const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, siteStatus = 'active' }) {
   const { loadThresholds, loadSiteThresholds } = useAlertSystem()
@@ -28,30 +29,8 @@ const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, site
     if (siteStatus !== 'active') {
       return { allSensors: sensors, statusColor: STATUS_COLORS.offline, statusLabel: siteStatus === 'maintenance' ? '점검중' : '비활성', lastUpdate: '업데이트 없음' }
     }
-
-    const SEVERITY = { offline: 0, normal: 1, warning: 2, alert: 3 }
-    let rep = { status: 'offline', timestamp: 0, severity: 0 }
-    const now = Date.now()
-
-    for (const s of sensors) {
-      const st = s.data?.status || 'offline'
-      const ts = s.data?.lastUpdate || s.data?.timestamp || 0
-      const sensorType = (s.key || '').split('_')[0]
-      const timeoutMs = timeouts?.[sensorType]?.offline_timeout || 60000
-      const isFresh = ts && (now - ts) < timeoutMs
-      const effectiveStatus = isFresh ? st : 'offline'
-      const sev = SEVERITY[effectiveStatus] ?? 0
-      if (sev > rep.severity || (sev === rep.severity && ts > rep.timestamp)) {
-        rep = { status: effectiveStatus, timestamp: ts, severity: sev }
-      }
-    }
-
-    return {
-      allSensors: sensors,
-      statusColor: STATUS_COLORS[rep.status],
-      statusLabel: STATUS_LABELS[rep.status] || rep.status,
-      lastUpdate: rep.timestamp ? new Date(rep.timestamp).toLocaleTimeString() : '업데이트 없음',
-    }
+    const rep = computeRepresentativeStatus(siteData, timeouts)
+    return { allSensors: sensors, statusColor: STATUS_COLORS[rep.status], statusLabel: STATUS_LABELS[rep.status] || rep.status, lastUpdate: rep.timestamp ? new Date(rep.timestamp).toLocaleTimeString() : '업데이트 없음' }
   }, [siteData, siteStatus, timeouts])
 
   return (

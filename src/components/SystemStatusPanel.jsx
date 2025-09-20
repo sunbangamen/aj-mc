@@ -5,7 +5,8 @@ function SystemStatusPanel() {
   const {
     isRunning,
     simulationConfig,
-    simulationStats
+    simulationStats,
+    watchdog
   } = useSimulation()
 
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -72,6 +73,7 @@ function SystemStatusPanel() {
   }
 
   const syncStatus = getSyncStatus()
+  const watchdogStatus = watchdog?.status || 'idle'
 
   // 시뮬레이션 모드 라벨 가져오기
   const getSimulationModeLabel = () => {
@@ -126,6 +128,17 @@ function SystemStatusPanel() {
                   <small>{getSimulationModeLabel()}</small>
                 </>
               ) : '중지됨'}
+            </div>
+          </div>
+        </div>
+
+        {/* 워치독 */}
+        <div className="status-item">
+          <div className="status-icon">🩺</div>
+          <div className="status-content">
+            <div className="status-label">워치독</div>
+            <div className="status-value">
+              {watchdogStatus === 'healthy' ? '정상' : watchdogStatus === 'delayed' ? '지연' : watchdogStatus === 'stopped' ? '중지됨' : '대기'}
             </div>
           </div>
         </div>

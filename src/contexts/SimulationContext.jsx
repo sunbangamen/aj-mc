@@ -57,6 +57,8 @@ export const SimulationProvider = ({ children }) => {
   const intervalRef = useRef(null)
   const simulatorsRef = useRef({}) // 사이트별 시뮬레이터 저장
   const timeoutsRef = useRef(new Set()) // timeout ID들을 관리하기 위한 ref
+  const watchdogTimerRef = useRef(null)
+  const [watchdog, setWatchdog] = useState({ status: 'idle', lastHeartbeat: 0 })
 
   // timeout 관리 헬퍼 함수들
   const addManagedTimeout = (callback, delay) => {
@@ -310,6 +312,9 @@ export const SimulationProvider = ({ children }) => {
     const processingTime = endTime - startTime
 
     // 통계 업데이트 (처리시간 포함)
+    const endTime = performance.now()
+    const processingTime = endTime - startTime
+
     setSimulationStats(prev => {
       const newProcessingTimes = [...prev.processingTimes, processingTime]
       // 최근 20개 처리시간만 유지
@@ -320,19 +325,23 @@ export const SimulationProvider = ({ children }) => {
       // 평균 처리시간 계산
       const averageProcessingTime = newProcessingTimes.reduce((sum, time) => sum + time, 0) / newProcessingTimes.length
 
-      return {
+      const next = {
         ...prev,
         totalUpdates: prev.totalUpdates + activeSites.length,
         lastUpdate: new Date().toLocaleTimeString(),
         processingTimes: newProcessingTimes,
         averageProcessingTime: Math.round(averageProcessingTime * 100) / 100 // 소수점 2자리
       }
+      return next
     })
 
     // 성능 모니터링 로그는 필요할 때만 출력
     if (processingTime > 100) {
       debug(`⚡ 시뮬레이션 사이클 완료: ${Math.round(processingTime)}ms`)
     }
+
+    // 워치독 하트비트 갱신
+    setWatchdog({ status: 'healthy', lastHeartbeat: Date.now() })
   }
 
   /**
@@ -446,6 +455,19 @@ export const SimulationProvider = ({ children }) => {
 
     setIsRunning(true)
 
+    // 워치독 시작
+    if (watchdogTimerRef.current) clearInterval(watchdogTimerRef.current)
+    setWatchdog({ status: 'healthy', lastHeartbeat: Date.now() })
+    watchdogTimerRef.current = setInterval(() => {
+      setWatchdog(prev => {
+        const now = Date.now()
+        const delay = now - (prev.lastHeartbeat || 0)
+        const threshold = (simulationConfig.interval || 3000) * 2
+        const status = delay > threshold ? 'delayed' : 'healthy'
+        return { status, lastHeartbeat: prev.lastHeartbeat }
+      })
+    }, Math.max(1000, simulationConfig.interval))
+
     // 즉시 첫 번째 사이클 실행
     await runSimulationCycle()
 
@@ -472,6 +494,11 @@ export const SimulationProvider = ({ children }) => {
     clearAllManagedTimeouts()
 
     setIsRunning(false)
+    if (watchdogTimerRef.current) {
+      clearInterval(watchdogTimerRef.current)
+      watchdogTimerRef.current = null
+    }
+    setWatchdog({ status: 'stopped', lastHeartbeat: Date.now() })
 
     // 비활성 및 점검중 현장의 센서를 오프라인으로 설정
     try {
@@ -668,6 +695,7 @@ export const SimulationProvider = ({ children }) => {
     isRunning,
     simulationConfig,
     simulationStats,
+    watchdog,
 
     // 함수
     startSimulation,
