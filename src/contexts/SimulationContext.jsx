@@ -10,24 +10,7 @@ import { generateSensorKey, getSensorPath, transformFirebaseObjectToArray } from
 import { debug, error as logError } from '../utils/log'
 
 // 내부 헬퍼: 메타데이터 생성기 접근 래퍼
-import {
-  generateHardwareMetadata,
-  generateMaintenanceInfo,
-  generateQualityMetrics,
-} from '../utils/sensorSimulator'
-
-const requireMeta = (type, arg) => {
-  switch (type) {
-    case 'hardware':
-      return generateHardwareMetadata(arg)
-    case 'maintenance':
-      return generateMaintenanceInfo()
-    case 'quality':
-      return generateQualityMetrics(arg || 'normal')
-    default:
-      return {}
-  }
-}
+import { generateHardwareMetadata, generateMaintenanceInfo, generateQualityMetrics } from '../utils/sensorSimulator'
 
 const SimulationContext = createContext()
 
@@ -786,9 +769,9 @@ export const SimulationProvider = ({ children }) => {
         }
 
         const meta = {
-          ...(await Promise.resolve().then(() => ({ ...requireMeta('hardware', sensorType) }))),
-          ...(await Promise.resolve().then(() => ({ ...requireMeta('maintenance') }))),
-          ...(await Promise.resolve().then(() => ({ ...requireMeta('quality', current.status) }))),
+          ...generateHardwareMetadata(sensorType),
+          ...generateMaintenanceInfo(),
+          ...generateQualityMetrics(current.status || 'normal'),
         }
 
         const updatePayload = {}
