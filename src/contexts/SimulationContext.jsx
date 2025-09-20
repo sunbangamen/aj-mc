@@ -9,6 +9,26 @@ import {
 import { generateSensorKey, getSensorPath, transformFirebaseObjectToArray } from '../types/sensor'
 import { debug, error as logError } from '../utils/log'
 
+// 내부 헬퍼: 메타데이터 생성기 접근 래퍼
+import {
+  generateHardwareMetadata,
+  generateMaintenanceInfo,
+  generateQualityMetrics,
+} from '../utils/sensorSimulator'
+
+const requireMeta = (type, arg) => {
+  switch (type) {
+    case 'hardware':
+      return generateHardwareMetadata(arg)
+    case 'maintenance':
+      return generateMaintenanceInfo()
+    case 'quality':
+      return generateQualityMetrics(arg || 'normal')
+    default:
+      return {}
+  }
+}
+
 const SimulationContext = createContext()
 
 export const useSimulation = () => {
@@ -710,6 +730,59 @@ export const SimulationProvider = ({ children }) => {
       } catch (error) {
         logError('❌ 센서 메타데이터 업데이트 오류:', error)
         return false
+      }
+    },
+
+    // 하드웨어 메타데이터 누락 시 보충
+    backfillHardwareMetadata: async (siteId, sensorKey) => {
+      try {
+        const sensorRef = ref(database, `sensors/${siteId}/${sensorKey}`)
+        const snapshot = await get(sensorRef)
+        if (!snapshot.exists()) return { success: false, message: '센서를 찾을 수 없습니다.' }
+
+        const current = snapshot.val() || {}
+        const [sensorType] = sensorKey.split('_')
+
+        // 이미 값이 있으면 변경하지 않음
+        const needBattery = current.batteryLevel === undefined || current.batteryLevel === null
+        const needSignal = current.signalStrength === undefined || current.signalStrength === null
+        const needModel = !current.hardwareModel
+        const needFirmware = !current.firmwareVersion
+        const needInstall = !current.installDate
+        const needMaintenance = !current.lastMaintenance
+        const needCalibration = !current.calibrationDate
+        const needQuality = current.accuracy === undefined || current.reliability === undefined
+
+        if (!(needBattery || needSignal || needModel || needFirmware || needInstall || needMaintenance || needCalibration || needQuality)) {
+          return { success: true, message: '이미 하드웨어 메타데이터가 설정되어 있습니다.' }
+        }
+
+        const meta = {
+          ...(await Promise.resolve().then(() => ({ ...requireMeta('hardware', sensorType) }))),
+          ...(await Promise.resolve().then(() => ({ ...requireMeta('maintenance') }))),
+          ...(await Promise.resolve().then(() => ({ ...requireMeta('quality', current.status) }))),
+        }
+
+        const updatePayload = {}
+        if (needBattery && meta.batteryLevel !== undefined) updatePayload.batteryLevel = meta.batteryLevel
+        if (needSignal && meta.signalStrength !== undefined) updatePayload.signalStrength = meta.signalStrength
+        if (needModel && meta.hardwareModel) updatePayload.hardwareModel = meta.hardwareModel
+        if (needFirmware && meta.firmwareVersion) updatePayload.firmwareVersion = meta.firmwareVersion
+        if (needInstall && meta.installDate) updatePayload.installDate = meta.installDate
+        if (needMaintenance && meta.lastMaintenance) updatePayload.lastMaintenance = meta.lastMaintenance
+        if (needCalibration && meta.calibrationDate) updatePayload.calibrationDate = meta.calibrationDate
+        if (needQuality && meta.accuracy !== undefined) {
+          updatePayload.accuracy = meta.accuracy
+          updatePayload.reliability = meta.reliability
+          updatePayload.errorCount = meta.errorCount
+          updatePayload.consecutiveErrors = meta.consecutiveErrors
+        }
+
+        await update(sensorRef, updatePayload)
+        return { success: true, message: '하드웨어 메타데이터를 보충했습니다.' }
+      } catch (e) {
+        logError('하드웨어 메타데이터 보충 오류:', e)
+        return { success: false, message: e?.message || '오류' }
       }
     },
 
