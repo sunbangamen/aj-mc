@@ -100,6 +100,17 @@ export const STATUS_LABELS = {
   offline: '오프라인',
 }
 
+// 상태 문자열 정규화
+// - 흔한 오타 'nomal' → 'normal'
+// - 정의되지 않은 값은 'offline'으로 폴백
+export const normalizeStatus = (status) => {
+  if (!status || typeof status !== 'string') return 'offline'
+  const s = status.toLowerCase()
+  if (s === 'nomal') return 'normal'
+  if (STATUS_LABELS[s]) return s
+  return 'offline'
+}
+
 // 상태 판정 함수
 export const getStatusByDistance = distance => {
   if (distance < 100) return 'normal'
@@ -107,10 +118,16 @@ export const getStatusByDistance = distance => {
   return 'alert'
 }
 
+// 시간 보정: 초/밀리초 혼용 안전 처리
+const toMillis = (ts) => {
+  if (!ts || typeof ts !== 'number') return 0
+  return ts > 1_000_000_000_000 ? ts : ts * 1000
+}
+
 // 시간 포맷팅 유틸리티 함수들
 export const formatTime = timestamp => {
   if (!timestamp) return '-'
-  const date = new Date(timestamp)
+  const date = new Date(toMillis(timestamp))
   return date.toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -120,7 +137,7 @@ export const formatTime = timestamp => {
 
 export const formatDateTime = timestamp => {
   if (!timestamp) return '-'
-  const date = new Date(timestamp)
+  const date = new Date(toMillis(timestamp))
   return date.toLocaleString('ko-KR', {
     month: '2-digit',
     day: '2-digit',
@@ -131,7 +148,7 @@ export const formatDateTime = timestamp => {
 
 export const formatChartTime = timestamp => {
   if (!timestamp) return ''
-  const date = new Date(timestamp)
+  const date = new Date(toMillis(timestamp))
   return date.toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -148,7 +165,7 @@ export const transformHistoryForChart = (historyData, sensorType = null) => {
     .map(item => {
       const baseData = {
         time: formatChartTime(item.timestamp),
-        status: item.status,
+        status: normalizeStatus(item.status),
         timestamp: item.timestamp,
       }
 

@@ -9,6 +9,7 @@ const SiteCard = React.memo(function SiteCard({ siteId, siteData, siteName, site
   const { loadThresholds, loadSiteThresholds } = useAlertSystem()
   const [timeouts, setTimeouts] = useState(null)
 
+
   useEffect(() => {
     let mounted = true
     const load = async () => {

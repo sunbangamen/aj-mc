@@ -360,7 +360,14 @@ const HardwareMetadataPanel = () => {
                   <label>📅 설치일</label>
                   <input
                     type="date"
-                    value={new Date(editingMetadata.editableData.installDate).toISOString().split('T')[0]}
+                    value={(() => {
+                      try {
+                        const date = new Date(editingMetadata.editableData.installDate);
+                        return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+                      } catch {
+                        return '';
+                      }
+                    })()}
                     onChange={(e) => updateEditableData('installDate', new Date(e.target.value).getTime())}
                   />
                 </div>
@@ -368,7 +375,14 @@ const HardwareMetadataPanel = () => {
                   <label>🔍 마지막 점검일</label>
                   <input
                     type="date"
-                    value={new Date(editingMetadata.editableData.lastMaintenance).toISOString().split('T')[0]}
+                    value={(() => {
+                      try {
+                        const date = new Date(editingMetadata.editableData.lastMaintenance);
+                        return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+                      } catch {
+                        return '';
+                      }
+                    })()}
                     onChange={(e) => updateEditableData('lastMaintenance', new Date(e.target.value).getTime())}
                   />
                 </div>
