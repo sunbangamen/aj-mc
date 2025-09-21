@@ -25,7 +25,7 @@ export const DEFAULT_THRESHOLDS = {
     warning: { min: 26, max: 35 },
     alert: { min: 36, max: 50 },
     critical: { min: 55, max: 80 },
-    offline_timeout: 60000,
+    offline_timeout: 60000, // 1분
     duplicate_prevention: {
       warning: 30 * 60 * 1000,    // 30분 (온도는 천천히 변함)
       alert: 15 * 60 * 1000,      // 15분
@@ -41,7 +41,7 @@ export const DEFAULT_THRESHOLDS = {
     warning: { min: 61, max: 80 },
     alert: { min: 81, max: 95 },
     critical: { min: 96, max: 100 },
-    offline_timeout: 60000,
+    offline_timeout: 60000, // 1분
     duplicate_prevention: {
       warning: 60 * 60 * 1000,    // 60분 (습도는 덜 민감)
       alert: 30 * 60 * 1000,      // 30분
@@ -57,7 +57,7 @@ export const DEFAULT_THRESHOLDS = {
     warning: { min: 990, max: 999 },
     alert: { min: 980, max: 989 },
     critical: { min: 950, max: 979 },
-    offline_timeout: 60000,
+    offline_timeout: 60000, // 1분
     duplicate_prevention: {
       warning: 45 * 60 * 1000,    // 45분
       alert: 20 * 60 * 1000,      // 20분
@@ -128,6 +128,12 @@ export const ALERT_TYPES = {
 const recentAlertsCache = new Map()
 const alertTimeouts = new Map()
 
+// 초/밀리초 혼용 안전 처리
+const toMillis = (ts) => {
+  if (!ts || typeof ts !== 'number') return 0
+  return ts > 1_000_000_000_000 ? ts : ts * 1000
+}
+
 /**
  * 센서별 중복 방지 체크
  */
@@ -178,8 +184,11 @@ export const generateAlerts = (sensorData, sensorType, siteId, sensorKey, thresh
   const lastAlertData = recentAlertsCache.get(sensorId)
 
   // 1. 오프라인 상태 체크 (최우선, 중복 방지 무시)
-  if (sensorData.status === 'offline' ||
-      (timestamp - sensorData.lastUpdate) > currentThresholds.offline_timeout) {
+  const lastUpdateMs = toMillis(sensorData.lastUpdate || sensorData.timestamp)
+  const FUTURE_SKEW_MS = 120000 // 2분 허용
+  const futureSkew = lastUpdateMs - timestamp
+  const delta = futureSkew > FUTURE_SKEW_MS ? (currentThresholds.offline_timeout + 1) : Math.max(0, timestamp - lastUpdateMs)
+  if (sensorData.status === 'offline' || delta > currentThresholds.offline_timeout) {
 
     // 오프라인 알림은 항상 생성 (안전 우선)
     const offlineAlert = createAlert(
@@ -188,7 +197,7 @@ export const generateAlerts = (sensorData, sensorType, siteId, sensorKey, thresh
       sensorKey,
       '센서가 오프라인 상태입니다',
       {
-        lastSeen: sensorData.lastUpdate || sensorData.timestamp || timestamp || Date.now(),
+        lastSeen: lastUpdateMs || timestamp,
         timeout: currentThresholds.offline_timeout
       }
     )

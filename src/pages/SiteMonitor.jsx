@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useSiteSensorData } from '../hooks/useSensorData'
 import { useSite } from '../hooks/useSiteManagement'
 import { STATUS_COLORS, STATUS_LABELS, extractSensorsFromSiteData, getLegacySensorData } from '../types/sensor'
+import { computeRepresentativeStatus } from '../utils/representativeStatus'
 import { useAlertSystem } from '../hooks/useAlertSystem'
 import { debug, error as logError } from '../utils/log'
 import MeasurementTable from '../components/MeasurementTable'
@@ -156,9 +157,55 @@ function SiteMonitor() {
     )
   }
 
-  const statusColor = STATUS_COLORS[mainSensor.status] || STATUS_COLORS.offline
-  const statusLabel = STATUS_LABELS[mainSensor.status] || STATUS_LABELS.offline
-  const lastUpdate = new Date(mainSensor.timestamp).toLocaleString()
+  // 대표 상태(히스토리 최신값 포함)로 표시해 오프라인 오표시 방지
+  const effectiveThresholds = (siteThresholds && Object.keys(siteThresholds).length > 0) ? siteThresholds : thresholds
+  const rep = computeRepresentativeStatus(sensorData, effectiveThresholds)
+  const statusColor = STATUS_COLORS[rep.status] || STATUS_COLORS.offline
+  const statusLabel = STATUS_LABELS[rep.status] || STATUS_LABELS.offline
+  const lastUpdate = rep.timestamp ? new Date(rep.timestamp).toLocaleString() : '업데이트 없음'
+
+  // 개별 센서 신선도/상태 계산 (현재 노드가 오래되도 최신 히스토리를 반영)
+  const getEffectiveSensorStatus = (sensor) => {
+    if (!sensor || !sensor.data) return { status: 'offline', timestamp: 0 }
+    const sensorType = sensor.key.split('_')[0]
+    const timeoutMs = (effectiveThresholds?.[sensorType]?.offline_timeout) ?? 300000
+
+    const currentStatus = (sensor.data.status && typeof sensor.data.status === 'string')
+      ? sensor.data.status.toLowerCase() === 'nomal' ? 'normal' : sensor.data.status
+      : 'offline'
+    const currentTs = sensor.data.lastUpdate || sensor.data.timestamp || 0
+
+    let latestHistTs = 0
+    let latestHistStatus = null
+    const hist = sensor.data.history
+    if (hist && typeof hist === 'object') {
+      const keys = Object.keys(hist)
+      if (keys.length > 0) {
+        const parsed = keys.map(k => parseInt(k, 10) || 0)
+        latestHistTs = Math.max(...parsed)
+        const histEntry = hist[String(latestHistTs)]
+        const raw = histEntry?.status
+        latestHistStatus = (raw && typeof raw === 'string') ? (raw.toLowerCase() === 'nomal' ? 'normal' : raw) : null
+      }
+    }
+
+    const ts = Math.max(currentTs || 0, latestHistTs || 0)
+    const st = (ts === latestHistTs && latestHistStatus) ? latestHistStatus : currentStatus
+
+    const nowMs = Date.now()
+    // 초/밀리초 혼용 안전 처리
+    const tsMs = ts > 1000000000000 ? ts : (ts * 1000)
+    const FUTURE_SKEW_MS = 120000 // 2분 허용
+    const futureSkew = tsMs - nowMs
+    let isFresh
+    if (futureSkew > FUTURE_SKEW_MS) {
+      isFresh = false
+    } else {
+      const delta = Math.max(0, nowMs - tsMs)
+      isFresh = ts && delta < timeoutMs
+    }
+    return { status: isFresh ? st : 'offline', timestamp: ts }
+  }
 
   return (
     <div className="site-monitor">
@@ -354,11 +401,12 @@ function SiteMonitor() {
                       compact={false}
                     />
                   </h3>
+                  {(() => { const eff = getEffectiveSensorStatus(sensor); return (
                   <div className="sensor-current-status">
                     <span
                       className="status-indicator"
                       style={{
-                        backgroundColor: STATUS_COLORS[sensor.data?.status || 'offline'],
+                        backgroundColor: STATUS_COLORS[eff.status || 'offline'],
                         color: 'white',
                         padding: '4px 12px',
                         borderRadius: '12px',
@@ -366,12 +414,13 @@ function SiteMonitor() {
                         fontWeight: '600'
                       }}
                     >
-                      {STATUS_LABELS[sensor.data?.status || 'offline']}
+                      {STATUS_LABELS[eff.status || 'offline']}
                     </span>
                     <span className="current-value">
                       현재: {sensor.value || '---'} {sensor.unit}
                     </span>
                   </div>
+                  ) })()}
                 </div>
 
                 {/* 개별 센서 차트 */}
