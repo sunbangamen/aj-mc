@@ -520,6 +520,12 @@ const CLEANUP_CONFIG = {
   batchSize: 100            // 한 번에 100개씩 삭제
 }
 
+// 센서 측정 히스토리 정리 설정(테스트용 기본값: 7일 보존)
+const SENSOR_HISTORY_CLEANUP = {
+  maxHistoryDays: 7,          // 7일 이전 측정 히스토리 삭제 (테스트 기준)
+  batchSize: 200              // 멀티로케이션 업데이트 200개 단위
+}
+
 /**
  * 오래된 알림 히스토리 정리 (Firebase에서)
  */
@@ -572,6 +578,90 @@ export const cleanupAlertHistory = async (database) => {
     return { deleted: deletedCount, kept: keptCount }
   } catch (error) {
     console.error('❌ 히스토리 정리 오류:', error)
+    return { deleted: 0, kept: 0, error: error.message }
+  }
+}
+
+/**
+ * 센서 측정 히스토리 정리 (sensors/{siteId}/{sensorKey}/history)
+ * - 오래된 timestamp 키를 배치로 null 업데이트(멀티 로케이션)하여 삭제
+ */
+export const cleanupSensorHistory = async (database, options = {}) => {
+  const cfg = {
+    ...SENSOR_HISTORY_CLEANUP,
+    ...options
+  }
+
+  try {
+    const now = Date.now()
+    const cutoffTime = now - (cfg.maxHistoryDays * 24 * 60 * 60 * 1000)
+
+    console.log(`🧹 센서 측정 히스토리 정리 시작 (${cfg.maxHistoryDays}일 이전)`)
+
+    const { ref, get, update } = await import('firebase/database')
+
+    const sensorsRootRef = ref(database, 'sensors')
+    const sensorsRootSnap = await get(sensorsRootRef)
+    if (!sensorsRootSnap.exists()) {
+      console.log('📄 센서 데이터가 없어 정리를 건너뜁니다')
+      return { deleted: 0, kept: 0 }
+    }
+
+    const sensorsRoot = sensorsRootSnap.val() || {}
+
+    let deletedCount = 0
+    let keptCount = 0
+    let batchUpdates = {}
+    let batchSize = 0
+
+    const flushBatch = async () => {
+      if (batchSize === 0) return
+      const rootRef = ref(database)
+      await update(rootRef, batchUpdates)
+      batchUpdates = {}
+      batchSize = 0
+    }
+
+    // siteId 단위 순회
+    for (const [siteId, siteNode] of Object.entries(sensorsRoot)) {
+      if (!siteNode || typeof siteNode !== 'object') continue
+      // 각 센서 키 순회 (history 제외)
+      for (const [sensorKey, sensorNode] of Object.entries(siteNode)) {
+        if (!sensorNode || typeof sensorNode !== 'object') continue
+        const history = sensorNode.history
+        if (!history || typeof history !== 'object') continue
+
+        // 오래된 히스토리 항목 선별
+        for (const [tsKey, entry] of Object.entries(history)) {
+          const parsed = parseInt(tsKey, 10)
+          if (!Number.isFinite(parsed)) { keptCount++; continue }
+          // 키가 초 단위일 수도 있어 보정
+          const tsMs = parsed > 1_000_000_000_000 ? parsed : parsed * 1000
+          const entryTsMs = (entry && typeof entry.timestamp === 'number')
+            ? (entry.timestamp > 1_000_000_000_000 ? entry.timestamp : entry.timestamp * 1000)
+            : tsMs
+          if (entryTsMs < cutoffTime) {
+            const path = `sensors/${siteId}/${sensorKey}/history/${tsKey}`
+            batchUpdates[path] = null
+            batchSize++
+            deletedCount++
+            if (batchSize >= cfg.batchSize) {
+              await flushBatch()
+            }
+          } else {
+            keptCount++
+          }
+        }
+      }
+    }
+
+    // 남은 배치 처리
+    await flushBatch()
+
+    console.log(`✅ 센서 히스토리 정리 완료: ${deletedCount}개 삭제, ${keptCount}개 보존`)
+    return { deleted: deletedCount, kept: keptCount }
+  } catch (error) {
+    console.error('❌ 센서 히스토리 정리 오류:', error)
     return { deleted: 0, kept: 0, error: error.message }
   }
 }
@@ -633,10 +723,13 @@ export const startAutoCleanup = (database) => {
       // Firebase 히스토리 정리
       const historyResult = await cleanupAlertHistory(database)
 
+      // 센서 측정 히스토리 정리
+      const sensorHistoryResult = await cleanupSensorHistory(database)
+
       // 메모리 캐시 정리
       const cacheResult = cleanupMemoryCache()
 
-      console.log(`📊 정리 완료 - 히스토리: ${historyResult.deleted}개, 캐시: ${cacheResult}개`)
+      console.log(`📊 정리 완료 - 알림: ${historyResult.deleted}개, 센서: ${sensorHistoryResult.deleted}개, 캐시: ${cacheResult}개`)
 
     } catch (error) {
       console.error('❌ 자동 정리 오류:', error)
@@ -646,6 +739,8 @@ export const startAutoCleanup = (database) => {
   // 즉시 한 번 실행
   setTimeout(() => {
     cleanupMemoryCache()
+    // 초기 실행에서 센서 히스토리도 한 번 정리(가벼운 데이터 기준)
+    cleanupSensorHistory(database, { maxHistoryDays: SENSOR_HISTORY_CLEANUP.maxHistoryDays }).catch(() => {})
   }, 5000) // 5초 후 첫 정리
 
   console.log(`🚀 자동 정리 스케줄러 시작 (${CLEANUP_CONFIG.cleanupInterval / 1000 / 60 / 60}시간마다)`)

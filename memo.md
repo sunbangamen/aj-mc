@@ -1,8 +1,8 @@
 # 🚀 관제모니터링 시스템 개발 현황 메모
 
-**최종 업데이트**: 2025-09-20
+**최종 업데이트**: 2025-09-21
 **브랜치**: aj-mc-issue-3
-**최근 완료**: Phase 10A-2 센서 위치 맵 시스템 + 클릭 편집 기능 + 코드 품질 개선
+**최근 완료**: 하드웨어 통합 문제 해결 + 오프라인 감지 개선
 
 ---
 
@@ -180,6 +180,80 @@ src/
 └── scripts/
     └── check-env.mjs           # 환경변수 검증
 ```
+
+---
+
+## 🔧 2025-09-21 하드웨어 통합 문제 해결 (Hardware Integration)
+
+### ✅ ESP8266 + SRF05 실제 하드웨어 연동 완료
+**브랜치**: aj-mc-issue-3
+**완료일**: 2025-09-21
+**커밋**: bc1a4cb - fix(hardware): resolve hardware integration issues and improve offline detection
+
+#### 해결된 주요 문제들
+1. **센서 키 보존 이슈**:
+   - 문제: 차트와 측정이력이 새로 생성된 사이트에서 표시되지 않음
+   - 원인: Firebase 키('ultrasonic_01')와 컴포넌트 접근('ultrasonic_1') 불일치
+   - 해결: `extractSensorsFromSiteData`에서 원본 Firebase 키 보존하도록 수정
+
+2. **타임스탬프 처리 개선**:
+  - 하드웨어(초 단위)와 웹(밀리초 단위) 호환성 해결
+
+---
+
+## 🚦 성능/최적화 개선 방향 (가이드)
+
+현재 규모·시나리오에서는 사용상 문제 없음. 아래는 “해야 할 일”이 아니라, 센서/사이트가 커질 때 고려할 권장 방향입니다.
+
+- 리스너 범위 축소: useAlertSystem에서 `onValue('sensors/${siteId}')` 대신 센서 노드 단위 `onChildAdded/Changed`로 증분 처리. 새 사이트 추가 시 동적 리스너 부착/해제 지원.
+- 대시보드 요약 경량화: `useAllSensorData`의 사이트별 전체 구독을 줄이고, 대표 상태/최신 타임스탬프만 담은 요약 경로(예: `sensorsSummary/${siteId}`) 사용 또는 관리 화면에서만 전체 구독.
+- 지연 구독(Lazy subscribe): SiteMonitor의 각 센서 섹션에 IntersectionObserver를 적용해 화면에 보일 때만 `SensorChart`/`MeasurementTable` 리스너 부착. 초기엔 상위 1~2개만 활성화.
+- 리스트 가상화: 센서가 많을 때 상세 섹션을 react-virtualized/virtuoso 등으로 가상 스크롤링 처리.
+- 쓰로틀/의존성 정교화: 대시보드 업데이트 쓰로틀(150ms→200~250ms) 상향 검토, `JSON.stringify(sites)` 대신 `sites.map(s=>s.id).join(',')` 등 안정 키 사용.
+- 배치 쓰기: SimulationContext의 센서별 개별 `set/update` 다건 호출을 멀티 로케이션 `update(ref(db), {path: val,...})`로 병합해 RTT/오버헤드 감소.
+- 리스너 해제 통일: `off()`와 `unsubscribe()` 동시 호출을 하나로 통일(중복 정리).
+- 새 사이트 핫플러그: 알림 훅에서 사이트 목록 실시간 감지로 리스너를 동적으로 추가/제거.
+- 시간 단위 표준화: DB 저장부터 ms로 통일하여 쿼리/정렬 단순화(현재는 보정부 존재하나 통일이 유지보수에 유리).
+- 대표 상태 정책 점검: 현재는 severity에서 offline을 낮게 취급(offline < normal < warning < alert). 운영 정책에 맞게 우선순위 조정 여부 검토.
+- 로깅 일원화: 산재한 `console.log`를 `debug()` 레벨 스위치로 일원화(프로덕션 노이즈 최소화).
+- 포맷 설정 정리: `.prettierrc`/`.prettierrc.json` 중 하나로 통일(기능 영향 없음, 관리 단순화).
+
+메모: 위 항목들은 “성능/확장성 최적화 가이드”이며, 현재 기능 동작에는 영향이 없습니다. 필요 시 단계적으로 적용을 검토하세요.
+   - 미래 타임스탬프 허용 오차 2분 추가 (시계 동기화 문제 대응)
+   - `representativeStatus.js`에서 정확한 오프라인 감지 로직 구현
+
+3. **JSX 구문 오류 해결**:
+   - `SiteMonitor.jsx:396` 중첩 삼항 연산자 구문 오류 수정
+   - `.map()` 함수를 올바른 JSX 파싱을 위해 괄호로 감쌈
+
+4. **Arduino 펌웨어 가이드 업데이트**:
+   - `docs/hardware/wemos-d1-srf05.md` 완전한 하드웨어 연동 가이드
+   - Firebase REST API + 익명 인증 + NTP 시간 동기화
+   - PATCH vs PUT 방식으로 데이터 업데이트 최적화
+
+5. **UI 개선**:
+   - 시뮬레이션/실제 센서 구분 배지 제거 (사용자 요청)
+   - 하드웨어 오류 표시 문제 분석 완료
+
+#### 현재 작동 상태
+- ✅ 실제 하드웨어 → Firebase 데이터 전송
+- ✅ 웹 대시보드 실시간 차트 표시
+- ✅ 측정 이력 정상 동작
+- ✅ 오프라인 감지 1분 이내 반영
+- ⚠️ 웹에서 하드웨어 오류 표시 이슈 (errorCount > 0으로 인한 UI 표시)
+
+#### 기술적 세부사항
+```javascript
+// 타임스탬프 처리 로직 (representativeStatus.js)
+const nowSec = Math.floor(now / 1000)
+const chosenSec = chosenTs > 1000000000000 ? Math.floor(chosenTs / 1000) : chosenTs
+const FUTURE_SKEW_SEC = 120 // 2분 허용 오차
+```
+
+#### 다음 작업
+- [ ] 실제 하드웨어 사이트의 errorCount 초기화
+- [ ] 시뮬레이션 데이터와 실제 데이터 구분 관리
+- [ ] Arduino 펌웨어 에러 카운트 처리 로직 추가
 
 ---
 
