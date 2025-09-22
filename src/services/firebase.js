@@ -2,6 +2,12 @@ import { initializeApp } from 'firebase/app'
 import { getDatabase, ref, update } from 'firebase/database'
 import { debug, error as logError } from '../utils/log'
 
+// 환경별 데이터 경로 분리 함수
+const getEnvironmentPath = () => {
+  const env = import.meta.env.VITE_ENVIRONMENT || 'production'
+  return env === 'production' ? '' : `${env}/`
+}
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -31,10 +37,34 @@ export const testFirebaseConnection = () => {
   }
 }
 
+// 센서 참조 함수 (환경별 경로 분리 적용)
+export const getSensorRef = (siteId, sensorKey) => {
+  const envPath = getEnvironmentPath()
+  return ref(database, `${envPath}sensors/${siteId}/${sensorKey}`)
+}
+
+// 사이트 참조 함수 (환경별 경로 분리 적용)
+export const getSiteRef = (siteId) => {
+  const envPath = getEnvironmentPath()
+  return ref(database, `${envPath}sites/${siteId}`)
+}
+
+// 사이트 목록 참조 함수
+export const getSitesRef = () => {
+  const envPath = getEnvironmentPath()
+  return ref(database, `${envPath}sites`)
+}
+
+// 센서 목록 참조 함수
+export const getSensorsRef = (siteId) => {
+  const envPath = getEnvironmentPath()
+  return ref(database, `${envPath}sensors/${siteId}`)
+}
+
 // 센서 데이터 업데이트 함수 (위치 정보 편집용)
 export const updateSensorData = async (siteId, sensorKey, updateData) => {
   try {
-    const sensorRef = ref(database, `sensors/${siteId}/${sensorKey}`)
+    const sensorRef = getSensorRef(siteId, sensorKey)
     await update(sensorRef, updateData)
     debug(`✅ 센서 데이터 업데이트 완료: ${siteId}/${sensorKey}`, updateData)
   } catch (error) {

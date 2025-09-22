@@ -157,9 +157,15 @@ This repository includes Korean-language Claude command templates:
 - **Local development**: WSL Ubuntu environment
 - **Package manager**: npm
 - **Build tool**: Vite
-- **Framework**: React 18
+- **Framework**: React 19
 - **Database**: Firebase Realtime Database
-- **Hosting**: Firebase Hosting
+- **Hosting**: Firebase Hosting (✅ **운영 중**)
+
+### 🌐 운영 환경 접속 정보
+- **운영 URL**: https://ultrasonic-monitoring-mvp.web.app
+- **Firebase Console**: https://console.firebase.google.com/project/ultrasonic-monitoring-mvp
+- **배포일**: 2025-09-22
+- **상태**: ✅ 정상 운영 중
 
 ## Common Development Commands
 
@@ -175,10 +181,13 @@ npm run lint             # ESLint code checking
 npm run format           # Prettier code formatting
 
 # Building
-npm run build           # Build for production
+npm run build           # Build for production (성능 최적화 적용)
 
-# Deployment
-firebase deploy         # Deploy to Firebase Hosting (not configured yet)
+# Deployment (✅ 구축 완료)
+npm run deploy          # 전체 배포 (빌드 + 호스팅 + 규칙)
+npm run deploy:hosting  # 호스팅만 배포
+npm run deploy:rules    # 보안 규칙만 배포
+firebase deploy         # Firebase CLI 직접 배포
 
 # Installation
 npm install             # Install dependencies
@@ -235,11 +244,19 @@ This project includes Korean language documentation and templates. All user-faci
 - **Phase 14E**: Alert and threshold system (완료)
 - **Phase 14F**: Site-specific threshold system + UI/UX improvements (완료)
 
+### ✅ **Phase 3 완료**: Firebase Hosting 배포 및 운영 환경 구축 (2025-09-22)
+- **Firebase Hosting 배포**: 운영 환경 정상 배포 완료
+- **환경 분리 시스템**: production/development 경로 분리 구현
+- **성능 최적화**: 번들 분리 및 코드 스플리팅 적용
+- **보안 설정**: Firebase Security Rules 적용
+- **CI/CD 준비**: GitHub Actions 워크플로우 구성
+
 ### 🚧 Next Phases (Recommended Priority)
-- **Phase 10**: Advanced data visualization with custom time ranges and filtering
-- **Phase 11**: Smart alert system with email/SMS notifications
-- **Phase 12**: Data export functionality (CSV/Excel) and reporting system
-- **Phase 13**: User authentication and role-based access control
+- **Phase 4**: GitHub Actions CI/CD 자동화 완성 (Secrets 설정)
+- **Phase 5**: Advanced data visualization with custom time ranges and filtering
+- **Phase 6**: Smart alert system with email/SMS notifications
+- **Phase 7**: Data export functionality (CSV/Excel) and reporting system
+- **Phase 8**: User authentication and role-based access control
 
 ### 📁 Important Files
 - `memo.md` - Detailed development progress and next steps
@@ -255,12 +272,19 @@ The project uses git worktrees for feature development:
 
 ## Quick Start for Development
 
+### 로컬 개발 환경
 1. **Start Development Server**: `npm run dev`
 2. **Access Interface**: http://localhost:5173/ (PC) or http://[network-ip]:5173/ (Mobile)
 3. **Test Firebase**: Use `/test` page to verify connection
 4. **Add Test Data**: Firebase Console → Realtime Database → Add sensor data
 5. **Monitor Real-time**: Change values in Firebase Console and watch live updates
 6. **Site Management**: Access `/admin` to create/edit/delete sites with automatic sensor data generation
+
+### 운영 환경 접속 🌐
+1. **운영 사이트**: https://ultrasonic-monitoring-mvp.web.app
+2. **모든 기능 사용 가능**: 대시보드, 사이트 관리, 알림, 시뮬레이션
+3. **실시간 센서 데이터**: Firebase Realtime Database 연동
+4. **모바일 최적화**: 스마트폰에서도 완전한 기능 사용 가능
 
 ## Recent Critical Fixes (2025-09-20)
 

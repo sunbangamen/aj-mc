@@ -520,9 +520,9 @@ const CLEANUP_CONFIG = {
   batchSize: 100            // 한 번에 100개씩 삭제
 }
 
-// 센서 측정 히스토리 정리 설정(테스트용 기본값: 7일 보존)
+// 센서 측정 히스토리 정리 설정(테스트용 기본값: 전체 삭제)
 const SENSOR_HISTORY_CLEANUP = {
-  maxHistoryDays: 7,          // 7일 이전 측정 히스토리 삭제 (테스트 기준)
+  maxHistoryDays: -1,         // -1일 = 미래 데이터까지 포함하여 모든 히스토리 삭제
   batchSize: 200              // 멀티로케이션 업데이트 200개 단위
 }
 
@@ -631,16 +631,10 @@ export const cleanupSensorHistory = async (database, options = {}) => {
         const history = sensorNode.history
         if (!history || typeof history !== 'object') continue
 
-        // 오래된 히스토리 항목 선별
+        // 전체 히스토리 삭제 (시간 비교 없이)
         for (const [tsKey, entry] of Object.entries(history)) {
-          const parsed = parseInt(tsKey, 10)
-          if (!Number.isFinite(parsed)) { keptCount++; continue }
-          // 키가 초 단위일 수도 있어 보정
-          const tsMs = parsed > 1_000_000_000_000 ? parsed : parsed * 1000
-          const entryTsMs = (entry && typeof entry.timestamp === 'number')
-            ? (entry.timestamp > 1_000_000_000_000 ? entry.timestamp : entry.timestamp * 1000)
-            : tsMs
-          if (entryTsMs < cutoffTime) {
+          if (cfg.maxHistoryDays < 0) {
+            // 전체 삭제 모드: 시간 비교 없이 모든 히스토리 삭제
             const path = `sensors/${siteId}/${sensorKey}/history/${tsKey}`
             batchUpdates[path] = null
             batchSize++
@@ -649,7 +643,24 @@ export const cleanupSensorHistory = async (database, options = {}) => {
               await flushBatch()
             }
           } else {
-            keptCount++
+            // 기존 시간 기반 삭제 로직
+            const parsed = parseInt(tsKey, 10)
+            if (!Number.isFinite(parsed)) { keptCount++; continue }
+            const tsMs = parsed > 1_000_000_000_000 ? parsed : parsed * 1000
+            const entryTsMs = (entry && typeof entry.timestamp === 'number')
+              ? (entry.timestamp > 1_000_000_000_000 ? entry.timestamp : entry.timestamp * 1000)
+              : tsMs
+            if (entryTsMs < cutoffTime) {
+              const path = `sensors/${siteId}/${sensorKey}/history/${tsKey}`
+              batchUpdates[path] = null
+              batchSize++
+              deletedCount++
+              if (batchSize >= cfg.batchSize) {
+                await flushBatch()
+              }
+            } else {
+              keptCount++
+            }
           }
         }
       }
