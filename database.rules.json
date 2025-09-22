@@ -1,0 +1,30 @@
+{
+  "rules": {
+    "sensors": {
+      ".read": true,
+      ".write": true
+    },
+    "sites": {
+      ".read": true,
+      ".write": true
+    },
+    "settings": {
+      "thresholds": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "alerts": {
+      ".read": true,
+      ".write": true
+    },
+    "development": {
+      ".read": true,
+      ".write": true
+    },
+    "staging": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
