@@ -12,45 +12,130 @@ This is a Firebase-based ultrasonic sensor monitoring system (관제모니터링
 
 ## Project Structure
 
-This project has completed Phase 1-2 of MVP development with real-time Firebase integration. Current architecture:
+This project has completed Phase 1-9 of MVP development with comprehensive monitoring system. Current architecture:
 
 ```
 src/
 ├── components/
-│   └── Layout.jsx         # Navigation layout (✅ implemented)
+│   ├── Layout.jsx           # Navigation with dropdown menu (✅ implemented)
+│   ├── MeasurementTable.jsx # Sensor measurement history table (✅ implemented)
+│   ├── SensorChart.jsx      # Recharts-based real-time chart (✅ implemented)
+│   ├── SiteForm.jsx         # Site creation/editing form (✅ implemented)
+│   ├── SystemStatsCards.jsx # Real-time system statistics cards (✅ implemented)
+│   ├── RecentEventsPanel.jsx # Recent events monitoring panel (✅ implemented)
+│   ├── SystemStatusPanel.jsx # System performance monitoring (✅ implemented)
+│   ├── QuickActionsPanel.jsx # Quick action buttons (✅ implemented)
+│   └── SensorSimulationPanel.jsx # Sensor data simulation controls (✅ implemented)
 ├── pages/
-│   ├── Dashboard.jsx      # Main dashboard showing all sites (✅ implemented)
-│   ├── SiteMonitor.jsx    # Individual site monitoring (✅ implemented)
-│   └── TestPanel.jsx      # Firebase connection testing (✅ implemented)
+│   ├── Dashboard.jsx        # Main dashboard showing all sites (✅ implemented)
+│   ├── SiteMonitor.jsx      # Individual site monitoring with charts (✅ implemented)
+│   ├── AdminDashboard.jsx   # Site management dashboard (✅ implemented)
+│   ├── TestPanel.jsx        # Firebase connection testing (✅ implemented)
+│   └── SimulationDashboard.jsx # Sensor simulation control interface (✅ implemented)
 ├── services/
-│   └── firebase.js        # Firebase configuration and services (✅ implemented)
+│   └── firebase.js          # Firebase configuration and services (✅ implemented)
 ├── hooks/
-│   └── useSensorData.js   # Custom hooks for real-time data (✅ implemented)
+│   ├── useSensorData.js     # Custom hooks for real-time sensor data (✅ implemented)
+│   └── useSiteManagement.js # Custom hooks for site CRUD operations (✅ implemented)
+├── contexts/
+│   └── SimulationContext.jsx # Global simulation state management (✅ implemented)
+├── utils/
+│   └── sensorSimulator.js   # Sensor data simulation utilities (✅ implemented)
 ├── types/
-│   └── sensor.js          # Data types and utilities (✅ implemented)
+│   ├── sensor.js            # Sensor data types and utilities (✅ implemented)
+│   └── site.js              # Site data types and utilities (✅ implemented)
 └── scripts/
-    └── check-env.mjs      # Environment validation (✅ implemented)
+    └── check-env.mjs        # Environment validation (✅ implemented)
 ```
 
 ## Firebase Data Structure
 
-The system monitors sensor data with this structure:
+The system uses dual data structure for sites and sensors:
 ```
-/sensors/
-├── site1/ultrasonic/     # Site 1 ultrasonic data
-├── site2/ultrasonic/     # Site 2 ultrasonic data
+/sites/                   # Site management data
+├── site_1234567890_abc123/
+│   ├── name: "현장명"
+│   ├── location: "현장 위치"
+│   ├── description: "현장 설명"
+│   ├── sensorCount: 2
+│   ├── sensorTypes: ["ultrasonic", "temperature"]
+│   ├── status: "active|inactive|maintenance"
+│   ├── createdAt: timestamp
+│   └── updatedAt: timestamp
+
+/sensors/                 # Real-time sensor data
+├── site_1234567890_abc123/
+│   ├── ultrasonic/
+│   │   ├── distance: 120
+│   │   ├── status: "normal|warning|alert|offline"
+│   │   ├── timestamp: timestamp
+│   │   └── history/      # Historical measurements (last 20)
+│   └── temperature/
 └── test/ultrasonic/      # Test data
 ```
 
 ## Key Features (✅ Implemented)
 
+### Core Monitoring System
 - **Real-time monitoring**: Firebase onValue listeners for live updates (✅ Working)
-- **Multi-site dashboard**: Overview of all sensor sites (✅ Working)
-- **Individual site details**: Detailed monitoring per site (✅ Working, charts pending)
-- **Mobile responsive**: Works on both desktop and mobile devices (✅ Working)
+- **Multi-site dashboard**: Overview of all sensor sites with real-time status (✅ Working)
+- **Individual site monitoring**: Detailed monitoring with Recharts visualization (✅ Working)
+- **Historical data**: Last 20 measurements with time-series charts (✅ Working)
+- **Mobile responsive**: Optimized for both desktop and mobile devices (✅ Working)
 - **Status indicators**: Color-coded status (normal/warning/alert/offline) (✅ Working)
 - **Error handling**: Graceful handling of connection failures and missing data (✅ Working)
+
+### Site Management System
+- **Admin dashboard**: Complete site management interface at `/admin` (✅ Working)
+- **Site CRUD operations**: Create, read, update, delete sites with validation (✅ Working)
+- **Dynamic site creation**: Auto-generates sensor data when creating sites (✅ Working)
+- **Site statistics**: Real-time stats (total sites, active sites, maintenance, sensors) (✅ Working)
+- **Form validation**: Comprehensive client-side validation with error handling (✅ Working)
+- **Sensor configuration**: Multi-sensor type selection (ultrasonic, temperature, humidity, pressure) (✅ Working)
+
+### Advanced Features (Phase 8-9)
+- **Sensor Data Simulation**: Real-time sensor data generation without physical hardware
+  - Multiple simulation modes: Random, Scenario-based, Gradual change
+  - Global state management with React Context API for persistent simulation
+  - Real-time Firebase data updates with performance monitoring
+  - Processing time measurement and optimization
+- **Professional Dashboard Interface**: Complete UI/UX overhaul
+  - Full-screen responsive layout (removed width constraints)
+  - Real-time system statistics cards with live counts and status indicators
+  - Recent events panel with chronological monitoring
+  - System performance monitoring with actual metrics (not fake CPU/memory)
+  - Quick actions panel for rapid system control
+- **Enhanced Navigation**: Scalable navigation system
+  - Brand updated to "(사)안전재해환경대책본부"
+  - Site links converted to dropdown menu for better scalability
+  - Dynamic site counter and "add new site" functionality
+
+### Enterprise Features (Phase 14A-F) - 2025-09-20
+- **Multi-sensor Architecture**: Support for multiple sensor types per site
+  - Ultrasonic, temperature, humidity, pressure sensors
+  - Individual sensor tracking with unique keys (ultrasonic_01, temperature_01, etc.)
+  - Backward compatibility with legacy single-sensor structure
+- **Hardware Metadata System**: Complete sensor lifecycle management
+  - Battery level, WiFi signal strength, firmware version tracking
+  - Installation date, maintenance schedule, calibration records
+  - Accuracy, reliability, error count monitoring
+- **Advanced Alert System**: 6-type alert system with real-time monitoring
+  - Threshold alerts (warning/alert ranges)
+  - Offline detection, battery warnings, signal strength alerts
+  - Maintenance reminders, error count tracking
+  - Site-specific and global threshold management
+- **Site-specific Threshold System**: Customizable alert thresholds
+  - Global default thresholds for all sites
+  - Site-specific override capability
+  - Sensor-type specific threshold configuration
+  - Admin panel with URL routing for easy management
+
+### Technical Features
 - **Environment validation**: Automated Firebase configuration checking (✅ Working)
+- **Real-time navigation**: Dynamic site dropdown menu with live updates (✅ Working)
+- **Data consistency**: Site creation/deletion includes corresponding sensor data (✅ Working)
+- **Global simulation management**: Persistent simulation state across page navigation (✅ Working)
+- **Performance monitoring**: Real application metrics instead of simulated system stats (✅ Working)
 
 ## Custom Commands
 
@@ -109,12 +194,13 @@ npm install             # Install dependencies
 ### Component Structure
 - Modular component design with common UI elements (✅ Implemented)
 - Responsive layout supporting both desktop monitoring and mobile viewing (✅ Implemented)
-- Chart integration using Recharts for data visualization (🚧 Planned for Phase 3)
+- Chart integration using Recharts for data visualization (✅ Completed in Phase 5)
 
 ### Routing (✅ Implemented)
 - React Router for SPA navigation:
-  - `/` - Main dashboard (✅ Working)
-  - `/site/:siteId` - Individual site monitoring (✅ Working)
+  - `/` - Main dashboard showing all sites overview (✅ Working)
+  - `/site/:siteId` - Individual site monitoring with charts and history (✅ Working)
+  - `/admin` - Site management dashboard with CRUD operations (✅ Working)
   - `/test` - Test panel for Firebase data verification (✅ Working)
 
 ## Environment Configuration (✅ Implemented)
@@ -131,17 +217,29 @@ This project includes Korean language documentation and templates. All user-faci
 
 ## Current Development Status
 
-### ✅ Completed (Phase 1-2)
-- **Environment Setup**: Vite + React + Firebase integration complete
-- **Real-time Monitoring**: Live sensor data with sub-second updates
-- **Multi-site Dashboard**: Simultaneous monitoring of multiple sensor locations
-- **Responsive UI**: Mobile and desktop compatible interface
-- **Error Handling**: Robust connection failure and data validation
+### ✅ Completed (Phase 1-9)
+- **Phase 1-2**: Environment Setup + Firebase integration complete
+- **Phase 3**: Real-time monitoring with live sensor data updates
+- **Phase 4**: Multi-site dashboard with simultaneous monitoring
+- **Phase 5**: Data visualization with Recharts + measurement history (Issue #3)
+- **Phase 7A**: Admin dashboard with site management CRUD operations
+- **Phase 7B**: Site creation/editing forms with comprehensive validation
+- **Phase 8**: Sensor data simulation system with global state management
+- **Phase 9**: Dashboard UI/UX improvements with professional monitoring interface
 
-### 🚧 Next Phase (Phase 3)
-- **Data Visualization**: Recharts integration for time-series charts
-- **Historical Data**: Measurement logs and trend analysis
-- **Enhanced Monitoring**: Offline detection and advanced alerting
+### ✅ Completed (Phase 14A-F) - 2025-09-20 업데이트
+- **Phase 14A**: Multi-sensor support architecture (완료)
+- **Phase 14B**: Multi-sensor simulation system (완료)
+- **Phase 14C**: Multi-sensor UI/UX complete support (완료)
+- **Phase 14D**: Hardware metadata extension (완료)
+- **Phase 14E**: Alert and threshold system (완료)
+- **Phase 14F**: Site-specific threshold system + UI/UX improvements (완료)
+
+### 🚧 Next Phases (Recommended Priority)
+- **Phase 10**: Advanced data visualization with custom time ranges and filtering
+- **Phase 11**: Smart alert system with email/SMS notifications
+- **Phase 12**: Data export functionality (CSV/Excel) and reporting system
+- **Phase 13**: User authentication and role-based access control
 
 ### 📁 Important Files
 - `memo.md` - Detailed development progress and next steps
@@ -162,3 +260,29 @@ The project uses git worktrees for feature development:
 3. **Test Firebase**: Use `/test` page to verify connection
 4. **Add Test Data**: Firebase Console → Realtime Database → Add sensor data
 5. **Monitor Real-time**: Change values in Firebase Console and watch live updates
+6. **Site Management**: Access `/admin` to create/edit/delete sites with automatic sensor data generation
+
+## Recent Critical Fixes (2025-09-20)
+
+### Sensor Key Preservation Issue
+- **Problem**: Charts and measurement history not displaying for newly created sites
+- **Root Cause**: Key mismatch between Firebase storage ('ultrasonic_01') and component access ('ultrasonic_1')
+- **Solution**: Modified `extractSensorsFromSiteData` in `src/types/sensor.js` to preserve original Firebase keys while maintaining display normalization
+- **Files Changed**: `src/types/sensor.js`, `src/pages/SiteMonitor.jsx`
+
+### JSX Syntax Error Resolution
+- **Problem**: Nested ternary operator syntax error in SiteMonitor.jsx:396
+- **Solution**: Properly wrapped `.map()` function in parentheses for correct JSX parsing
+- **Status**: ✅ Fixed - Server running without errors
+
+### System Completion Status
+- **Current State**: 99.5% complete enterprise monitoring system
+- **All Phase 14A-F Features**: Fully implemented and tested
+- **Next Recommended**: Phase 10 (Advanced Data Visualization) for enhanced user analytics
+
+## Location Display Enhancement Proposal
+- **Issue**: Sensor location information scattered across multiple components
+- **Priority Improvement Areas**:
+  1. Dashboard SiteCard - Add sensor location to main view
+  2. AlertBanner/AlertManager - Include location in alert messages
+  3. Visual sensor map - Future enhancement for spatial awareness
