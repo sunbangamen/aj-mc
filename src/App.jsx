@@ -10,6 +10,7 @@ import AdminPanel from './pages/AdminPanel'
 import SimulationPanel from './pages/SimulationPanel'
 import { SimulationProvider } from './contexts/SimulationContext'
 import { testFirebaseConnection } from './services/firebase'
+import AutoCleanupManager from './components/AutoCleanupManager'
 import './App.css'
 
 function App() {
@@ -22,6 +23,8 @@ function App() {
     <SimulationProvider>
       <ErrorBoundary>
         <BrowserRouter>
+          {/* 알림 히스토리/캐시 자동 정리 스케줄러 */}
+          <AutoCleanupManager />
           <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
