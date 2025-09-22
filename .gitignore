@@ -39,3 +39,4 @@ firebase.json
 
 # Firebase config files (keep template)
 !.env.example
+.env.backup
