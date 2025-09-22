@@ -28,7 +28,6 @@ dist-ssr
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
-firebase.json
 
 # Environment variables
 .env
