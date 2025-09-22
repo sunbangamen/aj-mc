@@ -2,7 +2,7 @@ name: Deploy to Firebase Hosting
 
 on:
   push:
-    branches: [main, aj-mc-issue-5]  # 현재 브랜치도 포함
+    branches: [main]  # main 브랜치에서만 자동 배포
   pull_request:
     branches: [main]
 
